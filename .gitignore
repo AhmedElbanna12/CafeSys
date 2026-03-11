@@ -1,0 +1,34 @@
+# Visual Studio temporary files
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build outputs
+bin/
+obj/
+out/
+
+# .NET Core / SDK files
+project.lock.json
+project.fragment.lock.json
+*.dotCover
+*.ncrunch*
+*.ReSharper*
+*.DotSettings.user
+
+# Environment files
+.env
+.env.*
+
+
+# Logs
+*.log
+
+# JetBrains Rider
+.idea/
+
+# NuGet packages
+*.nupkg
+*.snupkg
