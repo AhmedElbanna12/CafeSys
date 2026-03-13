@@ -1,9 +1,13 @@
 ﻿
 using DotNetEnv;
 using Foodics.Models;
+using Foodics.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using POSSystem.Data;
+using System.Text;
 
 namespace Foodics
 {
@@ -14,7 +18,6 @@ namespace Foodics
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
-
 
             builder.Configuration.AddEnvironmentVariables();
             DotNetEnv.Env.Load();
@@ -33,6 +36,35 @@ namespace Foodics
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
 
+            builder.Services.AddScoped<JwtService>();
+            var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY");
+
+            if (string.IsNullOrEmpty(jwtKey))
+            {
+                throw new Exception("JWT_KEY is missing in .env file");
+            }
+
+            var key = Encoding.UTF8.GetBytes(jwtKey);
+
+            builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+
+                    ValidIssuer = Environment.GetEnvironmentVariable("JWT_ISSUER"),
+                    ValidAudience = Environment.GetEnvironmentVariable("JWT_AUDIENCE"),
+                    IssuerSigningKey = new SymmetricSecurityKey(key)
+                };
+            });
 
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -62,8 +94,8 @@ namespace Foodics
 
             app.UseHttpsRedirection();
 
+            app.UseAuthentication();
             app.UseAuthorization();
-
 
             app.MapControllers();
 

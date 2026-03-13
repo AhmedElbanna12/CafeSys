@@ -28,7 +28,43 @@ namespace POSSystem.Data
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
-          
+
+            builder.Entity<Ingredient>()
+       .Property(i => i.MinQuantity)
+       .HasPrecision(18, 2);
+
+            builder.Entity<Ingredient>()
+                .Property(i => i.Quantity)
+                .HasPrecision(18, 2);
+
+            builder.Entity<Order>()
+                .Property(o => o.TotalAmount)
+                .HasPrecision(18, 2);
+
+            builder.Entity<OrderItem>()
+                .Property(oi => oi.UnitPrice)
+                .HasPrecision(18, 2);
+
+            builder.Entity<OrderItem>()
+                .Property(oi => oi.TotalPrice)
+                .HasPrecision(18, 2);
+
+            builder.Entity<Payment>()
+                .Property(p => p.Amount)
+                .HasPrecision(18, 2);
+
+            builder.Entity<Product>()
+                .Property(p => p.Price)
+                .HasPrecision(18, 2);
+
+            builder.Entity<ProductIngredient>()
+                .Property(pi => pi.Quantity)
+                .HasPrecision(18, 2);
+
+            builder.Entity<StockMovement>()
+                .Property(sm => sm.Quantity)
+                .HasPrecision(18, 2);
+
             // Orders → POSDevice
             builder.Entity<Order>()
                 .HasOne(o => o.POSDevice)
