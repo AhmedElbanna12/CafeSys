@@ -27,6 +27,8 @@ namespace Foodics
             var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION");
             var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL");
             var adminPassword = Environment.GetEnvironmentVariable("ADMIN_PASSWORD");
+            var adminphonenumber = Environment.GetEnvironmentVariable("ADMIN_PHONE");
+
 
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
             options.UseSqlServer(connectionString));
@@ -66,6 +68,16 @@ namespace Foodics
                 };
             });
 
+
+            builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler =
+            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
+
+
+
             builder.Services.AddControllers();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
@@ -82,7 +94,7 @@ namespace Foodics
                 var userManager = services.GetRequiredService<UserManager<User>>();
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
-                await SeedData.InitializeAsync(context, userManager, roleManager, adminEmail, adminPassword);
+                await SeedData.InitializeAsync(context, userManager, roleManager, adminEmail, adminPassword , adminphonenumber);
             }
 
             // Configure the HTTP request pipeline.

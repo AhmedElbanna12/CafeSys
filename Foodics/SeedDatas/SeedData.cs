@@ -11,7 +11,8 @@ namespace POSSystem.Data
     UserManager<User> userManager,
     RoleManager<IdentityRole> roleManager,
     string adminEmail,
-    string adminPassword)  // ← هنا
+    string adminPassword , 
+    string adminphonenumber)  // ← هنا
         {
             context.Database.Migrate();
 
@@ -30,6 +31,7 @@ namespace POSSystem.Data
                 {
                     UserName = adminEmail,
                     Email = adminEmail,
+                    PhoneNumber = adminphonenumber,
                     FullName = "System Admin",
                     EmailConfirmed = true
                 };

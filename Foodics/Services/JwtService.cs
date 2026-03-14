@@ -23,7 +23,8 @@ namespace Foodics.Services
             var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim("userId", user.Id)
+                new Claim("userId", user.Id) ,
+
             };
 
             foreach (var role in roles)

@@ -1,8 +1,9 @@
-﻿using Foodics.Dtos;
+﻿using Foodics.Dtos.Auth;
 using Foodics.Models;
 using Foodics.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace Foodics.Controllers
 {
@@ -32,6 +33,12 @@ namespace Foodics.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            var existingPhone = await _userManager.Users
+    .AnyAsync(u => u.PhoneNumber == model.PhoneNumber);
+            if (existingPhone)
+                return BadRequest("Phone number already exists");
+
+
             var existingUser = await _userManager.FindByEmailAsync(model.Email);
 
             if (existingUser != null)
@@ -41,7 +48,9 @@ namespace Foodics.Controllers
             {
                 FullName = model.FullName,
                 UserName = model.Email,
-                Email = model.Email
+                Email = model.Email , 
+                PhoneNumber = model.PhoneNumber,
+
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -61,24 +70,24 @@ namespace Foodics.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var user = await _userManager.FindByEmailAsync(model.Email);
-
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.PhoneNumber == model.PhoneNumber);
             if (user == null)
-                return Unauthorized("Invalid Email or Password");
+                return Unauthorized("Invalid Phone Number or Password");
 
             var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, false);
-
             if (!result.Succeeded)
-                return Unauthorized("Invalid Email or Password");
+                return Unauthorized("Invalid Phone Number or Password");
 
             var token = await _jwtService.GenerateToken(user);
 
             return Ok(new
             {
                 token = token,
-                email = user.Email,
+                phoneNumber = user.PhoneNumber,
                 name = user.FullName
             });
         }
+
+
     }
 }

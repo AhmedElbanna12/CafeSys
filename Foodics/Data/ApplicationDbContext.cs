@@ -39,6 +39,11 @@ namespace POSSystem.Data
         {
             base.OnModelCreating(builder);
 
+            // تأكد من uniqueness على PhoneNumber
+            builder.Entity<User>()
+                .HasIndex(u => u.PhoneNumber)
+                .IsUnique();
+
             // Precision Configurations
             builder.Entity<Ingredient>()
                 .Property(i => i.MinQuantity)
