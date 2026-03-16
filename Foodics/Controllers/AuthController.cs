@@ -4,6 +4,8 @@ using Foodics.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using QRCoder;
+using System.Drawing.Imaging;
 
 namespace Foodics.Controllers
 {
@@ -34,33 +36,45 @@ namespace Foodics.Controllers
                 return BadRequest(ModelState);
 
             var existingPhone = await _userManager.Users
-    .AnyAsync(u => u.PhoneNumber == model.PhoneNumber);
+                .AnyAsync(u => u.PhoneNumber == model.PhoneNumber);
             if (existingPhone)
                 return BadRequest("Phone number already exists");
 
-
             var existingUser = await _userManager.FindByEmailAsync(model.Email);
-
             if (existingUser != null)
                 return BadRequest("Email already exists");
+
+            // إنشاء CustomerCode فريد
+            var customerCode = Guid.NewGuid().ToString("N").ToUpper();
 
             var user = new User
             {
                 FullName = model.FullName,
                 UserName = model.Email,
-                Email = model.Email , 
+                Email = model.Email,
                 PhoneNumber = model.PhoneNumber,
-
+                CustomerCode = customerCode
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
-
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
 
+            // إنشاء QR Code يحتوي على CustomerCode
+            var qrGenerator = new QRCodeGenerator();
+            var qrData = qrGenerator.CreateQrCode(customerCode, QRCodeGenerator.ECCLevel.Q);
+            var qrCode = new QRCode(qrData);
+            using var qrBitmap = qrCode.GetGraphic(20);
+            using var ms = new MemoryStream();
+            qrBitmap.Save(ms, ImageFormat.Png);
+            var qrBase64 = Convert.ToBase64String(ms.ToArray());
+
+            // إرجاع البيانات
             return Ok(new
             {
-                message = "User Created Successfully"
+                message = "User Created Successfully",
+                customerCode = customerCode,
+                qrCodeBase64 = qrBase64
             });
         }
 

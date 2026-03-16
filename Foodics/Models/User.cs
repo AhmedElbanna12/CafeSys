@@ -15,5 +15,6 @@ namespace Foodics.Models
         [PersonalData]
         public override string PhoneNumber { get; set; } = null!;
 
+        public string CustomerCode { get; set; } = Guid.NewGuid().ToString();
     }
 }

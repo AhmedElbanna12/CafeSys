@@ -9,7 +9,7 @@ namespace Foodics.Controllers.Admin
 {
     [Route("api/admin/rewards")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
+   // [Authorize(Roles = "Admin")]
     public class AdminRewardsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

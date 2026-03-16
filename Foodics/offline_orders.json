@@ -1,0 +1,42 @@
+[
+  {
+    "OfflineOrderId": 0,
+    "CustomerCode": "3BE9E8E79BD146B799C865DF10F0F25B",
+    "POSDeviceId": 1,
+    "Items": [
+      {
+        "ProductId": 1,
+        "Quantity": 3,
+        "ProductSizeId": 5,
+        "ModifierOptionIds": [
+          3
+        ]
+      }
+    ],
+    "TotalAmount": 0.0,
+    "TotalPointsEarned": 0,
+    "CreatedAt": "2026-03-16T04:27:30.310615Z",
+    "IsSynced": false,
+    "RetryCount": 0
+  },
+  {
+    "OfflineOrderId": 1,
+    "CustomerCode": "3BE9E8E79BD146B799C865DF10F0F25B",
+    "POSDeviceId": 1,
+    "Items": [
+      {
+        "ProductId": 1,
+        "Quantity": 10,
+        "ProductSizeId": 5,
+        "ModifierOptionIds": [
+          3
+        ]
+      }
+    ],
+    "TotalAmount": 0.0,
+    "TotalPointsEarned": 0,
+    "CreatedAt": "2026-03-16T20:59:55.3203447Z",
+    "IsSynced": false,
+    "RetryCount": 0
+  }
+]

@@ -23,6 +23,11 @@ namespace Foodics.Models
 
         public bool IsAvailable { get; set; } = true;
 
+        public decimal? DiscountPercentage { get; set; }
+        public DateTime? DiscountStart { get; set; }
+        public DateTime? DiscountEnd { get; set; }
+
+
         [ForeignKey("Category")]
         public int CategoryId { get; set; }
         public Category Category { get; set; }
@@ -34,5 +39,7 @@ namespace Foodics.Models
         public ICollection<ProductIngredient> ProductIngredients { get; set; }
 
         public ICollection<OrderItem> OrderItems { get; set; }
+
+
     }
 }

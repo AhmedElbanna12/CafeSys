@@ -12,7 +12,7 @@ namespace Foodics.Controllers
 {
     [Route("api/admin/products")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
+   // [Authorize(Roles = "Admin")]
 
     public class AdminProductsController : ControllerBase
     {

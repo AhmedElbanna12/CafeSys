@@ -35,6 +35,9 @@ namespace POSSystem.Data
         public DbSet<Reward> Rewards { get; set; }
         public DbSet<RedeemedReward> RedeemedRewards { get; set; }
 
+        public DbSet<UserPoints> UserPoints { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

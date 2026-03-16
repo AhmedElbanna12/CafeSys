@@ -16,6 +16,6 @@ namespace Foodics.Models
         [ForeignKey("ModifierOption")]
         public int ModifierOptionId { get; set; }
 
-        public ModifierOption ModifierOption { get; set; } = new ModifierOption();
+        public ModifierOption ModifierOption { get; set; } 
     }
 }
