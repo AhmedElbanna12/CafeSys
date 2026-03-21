@@ -12,7 +12,7 @@ namespace Foodics.Controllers
 {
     [Route("api/admin/products")]
     [ApiController]
-   // [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
 
     public class AdminProductsController : ControllerBase
     {
@@ -64,16 +64,16 @@ namespace Foodics.Controllers
             _context.Products.Add(product);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, new
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+            return CreatedAtAction(nameof(GetProductById), new { id = product.Id }, new ProductResponseDto
             {
-                product.Id,
-                product.Name,
-                product.ImageUrl
+                Id = product.Id,
+                Name = product.Name,
+                ImageUrl = string.IsNullOrEmpty(product.ImageUrl) ? null : $"{baseUrl}{product.ImageUrl}"
             });
         }
 
-
-        // Add Size
         [HttpPost("{productId}/sizes")]
         public async Task<IActionResult> AddSize(int productId, CreateSizeDto dto)
         {
@@ -93,81 +93,28 @@ namespace Foodics.Controllers
             _context.ProductSizes.Add(size);
             await _context.SaveChangesAsync();
 
-            return Ok(size);
-        }
-
-        // Create Modifier Group
-        [HttpPost("{productId}/modifier-groups")]
-        public async Task<IActionResult> CreateModifierGroup(int productId, CreateModifierGroupDto dto)
-        {
-            var product = await _context.Products.FindAsync(productId);
-
-            if (product == null)
-                return NotFound("Product not found");
-
-            var group = new ModifierGroup
-            {
-                Name = dto.Name,
-                IsRequired = dto.IsRequired,
-                MaxSelections = dto.MaxSelections,
-                ProductId = productId
-            };
-
-            _context.ModifierGroups.Add(group);
-            await _context.SaveChangesAsync();
-
-            return Ok(group);
-        }
-
-        // Add Modifier Option
-        [HttpPost("modifier-groups/{groupId}/options")]
-        public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto dto)
-        {
-            var group = await _context.ModifierGroups.FindAsync(groupId);
-
-            if (group == null)
-                return NotFound("Modifier group not found");
-
-            var option = new ModifierOption
-            {
-                Name = dto.Name,
-                ExtraPrice = dto.ExtraPrice,
-                ModifierGroupId = groupId
-            };
-
-            _context.ModifierOptions.Add(option);
-            await _context.SaveChangesAsync();
-
-            return Ok(option);
-        }
-
-        // Get Single Product
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetProduct(int id)
-        {
-            var product = await _context.Products
+            // ✅ Load product with all navigation properties
+            var updatedProduct = await _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.Sizes)
                 .Include(p => p.ModifierGroups)
                     .ThenInclude(g => g.Options)
-                .FirstOrDefaultAsync(p => p.Id == id);
+                .FirstOrDefaultAsync(p => p.Id == productId);
 
-            if (product == null)
-                return NotFound();
-
+            // Map to DTO
             var result = new ProductResponseDto
             {
-                Id = product.Id,
-                Name = product.Name,
-                Description = product.Description,
-                Price = product.Price,
-                Calories = product.Calories,
-                PointsReward = product.PointsReward,
-                ImageUrl = product.ImageUrl,
-                IsAvailable = product.IsAvailable,
-                CategoryName = product.Category?.Name,
+                Id = updatedProduct.Id,
+                Name = updatedProduct.Name,
+                Description = updatedProduct.Description,
+                Price = updatedProduct.Price,
+                Calories = updatedProduct.Calories,
+                PointsReward = updatedProduct.PointsReward,
+                ImageUrl = updatedProduct.ImageUrl,
+                IsAvailable = updatedProduct.IsAvailable,
+                CategoryName = updatedProduct.Category?.Name,
 
-                Sizes = product.Sizes.Select(s => new ProductSizeDto
+                Sizes = updatedProduct.Sizes?.Select(s => new ProductSizeDto
                 {
                     Id = s.Id,
                     Name = s.Name,
@@ -175,7 +122,7 @@ namespace Foodics.Controllers
                     IsDefault = s.IsDefault
                 }).ToList(),
 
-                ModifierGroups = product.ModifierGroups.Select(g => new ModifierGroupDto
+                ModifierGroups = updatedProduct.ModifierGroups?.Select(g => new ModifierGroupDto
                 {
                     Id = g.Id,
                     Name = g.Name,
@@ -193,6 +140,78 @@ namespace Foodics.Controllers
             return Ok(result);
         }
 
+        [HttpPost("{productId}/modifier-groups")]
+        public async Task<IActionResult> CreateModifierGroup(int productId, CreateModifierGroupDto dto)
+        {
+            var product = await _context.Products.FindAsync(productId);
+            if (product == null)
+                return NotFound("Product not found");
+
+            var group = new ModifierGroup
+            {
+                Name = dto.Name,
+                IsRequired = dto.IsRequired,
+                MaxSelections = dto.MaxSelections,
+                ProductId = productId
+            };
+
+            _context.ModifierGroups.Add(group);
+            await _context.SaveChangesAsync();
+
+            // 🔹 رجع DTO فقط بدون navigation properties
+            var result = new ModifierGroupDto
+            {
+                Id = group.Id,
+                Name = group.Name,
+                IsRequired = group.IsRequired,
+                MaxSelections = group.MaxSelections,
+                Options = new List<ModifierOptionDto>() // خالي أول مرة
+            };
+
+            return Ok(result);
+        }
+
+        // Add Modifier Option
+      [HttpPost("modifier-groups/{groupId}/options")]
+public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto dto)
+{
+    var group = await _context.ModifierGroups.FindAsync(groupId);
+    if (group == null)
+        return NotFound("Modifier group not found");
+
+    var option = new ModifierOption
+    {
+        Name = dto.Name,
+        ExtraPrice = dto.ExtraPrice,
+        ModifierGroupId = groupId
+    };
+
+    _context.ModifierOptions.Add(option);
+    await _context.SaveChangesAsync();
+
+    // 🔹 Load group with all options
+    var updatedGroup = await _context.ModifierGroups
+        .Include(g => g.Options)
+        .FirstOrDefaultAsync(g => g.Id == groupId);
+
+    var result = new ModifierGroupDto
+    {
+        Id = updatedGroup.Id,
+        Name = updatedGroup.Name,
+        IsRequired = updatedGroup.IsRequired,
+        MaxSelections = updatedGroup.MaxSelections,
+        Options = updatedGroup.Options.Select(o => new ModifierOptionDto
+        {
+            Id = o.Id,
+            Name = o.Name,
+            ExtraPrice = o.ExtraPrice
+        }).ToList()
+    };
+
+    return Ok(result);
+}
+
+        
         // Get All Products
         [HttpGet]
         public async Task<IActionResult> GetProducts()
@@ -200,7 +219,13 @@ namespace Foodics.Controllers
             var products = await _context.Products
                 .Include(p => p.Category)
                 .Include(p => p.Sizes)
+                .Include(p => p.ModifierGroups)
+                    .ThenInclude(g => g.Options)
                 .ToListAsync();
+
+
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
 
             var result = products.Select(product => new ProductResponseDto
             {
@@ -210,7 +235,7 @@ namespace Foodics.Controllers
                 Price = product.Price,
                 Calories = product.Calories,
                 PointsReward = product.PointsReward,
-                ImageUrl = product.ImageUrl,
+                ImageUrl = string.IsNullOrEmpty(product.ImageUrl) ? null : $"{baseUrl}{product.ImageUrl}",
                 IsAvailable = product.IsAvailable,
                 CategoryName = product.Category?.Name,
 
@@ -220,12 +245,80 @@ namespace Foodics.Controllers
                     Name = s.Name,
                     Price = s.Price,
                     IsDefault = s.IsDefault
+                }).ToList(),
+
+                ModifierGroups = product.ModifierGroups?.Select(g => new ModifierGroupDto
+                {
+                    Id = g.Id,
+                    Name = g.Name,
+                    IsRequired = g.IsRequired,
+                    MaxSelections = g.MaxSelections,
+                    Options = g.Options.Select(o => new ModifierOptionDto
+                    {
+                        Id = o.Id,
+                        Name = o.Name,
+                        ExtraPrice = o.ExtraPrice
+                    }).ToList()
                 }).ToList()
             });
 
             return Ok(result);
-     
-       }
+        }
+
+
+        [HttpGet("product/{id}")]
+        public async Task<IActionResult> GetProductById(int id)
+        {
+            var product = await _context.Products
+                .Include(p => p.Category)
+                .Include(p => p.Sizes)
+                .Include(p => p.ModifierGroups)
+                    .ThenInclude(g => g.Options)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (product == null)
+                return NotFound("Product not found");
+
+
+            var baseUrl = $"{Request.Scheme}://{Request.Host}"; // 🔹 Full URL
+
+            var result = new ProductResponseDto
+            {
+                Id = product.Id,
+                Name = product.Name,
+                Description = product.Description,
+                Price = product.Price,
+                Calories = product.Calories,
+                PointsReward = product.PointsReward,
+                ImageUrl = string.IsNullOrEmpty(product.ImageUrl) ? null : $"{baseUrl}{product.ImageUrl}",
+                IsAvailable = product.IsAvailable,
+                CategoryName = product.Category?.Name,
+
+                Sizes = product.Sizes?.Select(s => new ProductSizeDto
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Price = s.Price,
+                    IsDefault = s.IsDefault
+                }).ToList(),
+
+                ModifierGroups = product.ModifierGroups?.Select(g => new ModifierGroupDto
+                {
+                    Id = g.Id,
+                    Name = g.Name,
+                    IsRequired = g.IsRequired,
+                    MaxSelections = g.MaxSelections,
+                    Options = g.Options.Select(o => new ModifierOptionDto
+                    {
+                        Id = o.Id,
+                        Name = o.Name,
+                        ExtraPrice = o.ExtraPrice
+                    }).ToList()
+                }).ToList()
+            };
+
+            return Ok(result);
+        }
 
         [HttpPut("{id}")]
         [RequestSizeLimit(10_000_000)] // 10 MB limit
@@ -235,16 +328,21 @@ namespace Foodics.Controllers
             if (product == null)
                 return NotFound("Product not found");
 
+            // Handle Image Upload
             if (dto.Image != null)
             {
                 var uploadsFolder = Path.Combine(_env.WebRootPath, "images", "products");
                 if (!Directory.Exists(uploadsFolder))
                     Directory.CreateDirectory(uploadsFolder);
 
-                // Delete old image if exists
+                // Delete old image
                 if (!string.IsNullOrEmpty(product.ImageUrl))
                 {
-                    var oldFile = Path.Combine(_env.WebRootPath, product.ImageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    var oldFile = Path.Combine(
+                        _env.WebRootPath,
+                        product.ImageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
+                    );
+
                     if (System.IO.File.Exists(oldFile))
                         System.IO.File.Delete(oldFile);
                 }
@@ -260,6 +358,7 @@ namespace Foodics.Controllers
                 product.ImageUrl = $"/images/products/{uniqueFileName}";
             }
 
+            // Update باقي البيانات
             product.Name = dto.Name;
             product.Description = dto.Description;
             product.Price = dto.Price;
@@ -269,7 +368,53 @@ namespace Foodics.Controllers
 
             await _context.SaveChangesAsync();
 
-            return Ok(product);
+            // ✅ رجع المنتج بالـ Includes
+            var updatedProduct = await _context.Products
+                .Include(p => p.Category)
+                .Include(p => p.Sizes)
+                .Include(p => p.ModifierGroups)
+                    .ThenInclude(g => g.Options)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+
+            var result = new ProductResponseDto
+            {
+                Id = updatedProduct.Id,
+                Name = updatedProduct.Name,
+                Description = updatedProduct.Description,
+                Price = updatedProduct.Price,
+                Calories = updatedProduct.Calories,
+                PointsReward = updatedProduct.PointsReward,
+                ImageUrl = string.IsNullOrEmpty(updatedProduct.ImageUrl) ? null : $"{baseUrl}{updatedProduct.ImageUrl}",
+                IsAvailable = updatedProduct.IsAvailable,
+                CategoryName = updatedProduct.Category?.Name,
+
+                Sizes = updatedProduct.Sizes?.Select(s => new ProductSizeDto
+                {
+                    Id = s.Id,
+                    Name = s.Name,
+                    Price = s.Price,
+                    IsDefault = s.IsDefault
+                }).ToList(),
+
+                ModifierGroups = updatedProduct.ModifierGroups?.Select(g => new ModifierGroupDto
+                {
+                    Id = g.Id,
+                    Name = g.Name,
+                    IsRequired = g.IsRequired,
+                    MaxSelections = g.MaxSelections,
+                    Options = g.Options.Select(o => new ModifierOptionDto
+                    {
+                        Id = o.Id,
+                        Name = o.Name,
+                        ExtraPrice = o.ExtraPrice
+                    }).ToList()
+                }).ToList()
+            };
+
+            return Ok(result);
         }
 
         [HttpDelete("{id}")]
@@ -308,8 +453,6 @@ namespace Foodics.Controllers
             });
         }
 
-
-        // Update Size
         [HttpPut("sizes/{sizeId}")]
         public async Task<IActionResult> UpdateSize(int sizeId, UpdateSizeDto dto)
         {
@@ -317,15 +460,27 @@ namespace Foodics.Controllers
             if (size == null)
                 return NotFound("Size not found");
 
+            // Update
             size.Name = dto.Name;
             size.Price = dto.Price;
             size.IsDefault = dto.IsDefault;
 
             await _context.SaveChangesAsync();
-            return Ok(size);
+
+            // Return فقط بيانات الحجم
+            var result = new
+            {
+                size.Id,
+                size.Name,
+                size.Price,
+                size.IsDefault
+            };
+
+            return Ok(result);
         }
 
-        // Update Modifier Group
+
+
         [HttpPut("modifier-groups/{groupId}")]
         public async Task<IActionResult> UpdateModifierGroup(int groupId, UpdateModifierGroupDto dto)
         {
@@ -333,12 +488,33 @@ namespace Foodics.Controllers
             if (group == null)
                 return NotFound("Modifier group not found");
 
+            // Update
             group.Name = dto.Name;
             group.IsRequired = dto.IsRequired;
             group.MaxSelections = dto.MaxSelections;
 
             await _context.SaveChangesAsync();
-            return Ok(group);
+
+            // 🔹 Load group with Options after update
+            var updatedGroup = await _context.ModifierGroups
+                .Include(g => g.Options)
+                .FirstOrDefaultAsync(g => g.Id == groupId);
+
+            var result = new ModifierGroupDto
+            {
+                Id = updatedGroup.Id,
+                Name = updatedGroup.Name,
+                IsRequired = updatedGroup.IsRequired,
+                MaxSelections = updatedGroup.MaxSelections,
+                Options = updatedGroup.Options?.Select(o => new ModifierOptionDto
+                {
+                    Id = o.Id,
+                    Name = o.Name,
+                    ExtraPrice = o.ExtraPrice
+                }).ToList() ?? new List<ModifierOptionDto>()
+            };
+
+            return Ok(result);
         }
 
         // Update Modifier Option
@@ -349,11 +525,106 @@ namespace Foodics.Controllers
             if (option == null)
                 return NotFound("Modifier option not found");
 
+            // Update
             option.Name = dto.Name;
             option.ExtraPrice = dto.ExtraPrice;
 
             await _context.SaveChangesAsync();
-            return Ok(option);
+
+            // 🔹 Load modifier group with all options
+            var updatedGroup = await _context.ModifierGroups
+                .Include(g => g.Options)
+                .FirstOrDefaultAsync(g => g.Id == option.ModifierGroupId);
+
+            var result = new ModifierGroupDto
+            {
+                Id = updatedGroup.Id,
+                Name = updatedGroup.Name,
+                IsRequired = updatedGroup.IsRequired,
+                MaxSelections = updatedGroup.MaxSelections,
+                Options = updatedGroup.Options.Select(o => new ModifierOptionDto
+                {
+                    Id = o.Id,
+                    Name = o.Name,
+                    ExtraPrice = o.ExtraPrice
+                }).ToList()
+            };
+
+            return Ok(result);
+        }
+
+
+        [HttpGet("{productId}/modifier-groups")]
+        public async Task<IActionResult> GetModifierGroupsByProduct(int productId)
+        {
+            var product = await _context.Products
+                .Include(p => p.ModifierGroups)
+                    .ThenInclude(g => g.Options)
+                .FirstOrDefaultAsync(p => p.Id == productId);
+
+            if (product == null)
+                return NotFound("Product not found");
+
+            var result = product.ModifierGroups.Select(g => new ModifierGroupDto
+            {
+                Id = g.Id,
+                Name = g.Name,
+                IsRequired = g.IsRequired,
+                MaxSelections = g.MaxSelections,
+                Options = g.Options.Select(o => new ModifierOptionDto
+                {
+                    Id = o.Id,
+                    Name = o.Name,
+                    ExtraPrice = o.ExtraPrice
+                }).ToList()
+            });
+
+            return Ok(result);
+        }
+
+
+        [HttpGet("modifier-groups/{groupId}")]
+        public async Task<IActionResult> GetModifierGroup(int groupId)
+        {
+            var group = await _context.ModifierGroups
+                .Include(g => g.Options)
+                .FirstOrDefaultAsync(g => g.Id == groupId);
+
+            if (group == null)
+                return NotFound("Modifier group not found");
+
+            var result = new ModifierGroupDto
+            {
+                Id = group.Id,
+                Name = group.Name,
+                IsRequired = group.IsRequired,
+                MaxSelections = group.MaxSelections,
+                Options = group.Options.Select(o => new ModifierOptionDto
+                {
+                    Id = o.Id,
+                    Name = o.Name,
+                    ExtraPrice = o.ExtraPrice
+                }).ToList()
+            };
+
+            return Ok(result);
+        }
+
+
+        [HttpGet("modifier-options/{optionId}")]
+        public async Task<IActionResult> GetOption(int optionId)
+        {
+            var option = await _context.ModifierOptions.FindAsync(optionId);
+
+            if (option == null)
+                return NotFound("Modifier option not found");
+
+            return Ok(new ModifierOptionDto
+            {
+                Id = option.Id,
+                Name = option.Name,
+                ExtraPrice = option.ExtraPrice
+            });
         }
 
     }

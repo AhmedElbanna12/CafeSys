@@ -34,7 +34,20 @@ namespace Foodics.Controllers.Admin
             _context.Rewards.Add(reward);
             await _context.SaveChangesAsync();
 
-            return Ok(reward);
+            // 🔹 Load Product navigation property
+            var rewardWithProduct = await _context.Rewards
+                .Include(r => r.Product)
+                .FirstOrDefaultAsync(r => r.Id == reward.Id);
+
+            return Ok(new RewardResponseDto
+            {
+                Id = reward.Id,
+                Name = reward.Name,
+                PointsRequired = reward.PointsRequired,
+                ProductId = reward.ProductId,
+                ProductName = reward.Product?.Name,
+                IsActive = reward.IsActive
+            });
         }
 
         // Get All Rewards
