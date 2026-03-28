@@ -10,7 +10,6 @@ namespace Foodics.Controllers
 {
     [Route("api/admin/categories")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
     public class AdminCategoriesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -20,6 +19,9 @@ namespace Foodics.Controllers
             _context = context;
         }
 
+
+
+        [Authorize(Roles = "Admin")]
         // Create Category
         [HttpPost]
         public async Task<IActionResult> CreateCategory(CreateCategoryDto dto)
@@ -73,6 +75,8 @@ namespace Foodics.Controllers
             });
         }
 
+
+        [Authorize(Roles = "Admin")]
         // Update Category
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateCategory(int id, UpdateCategoryDto dto)
@@ -94,6 +98,8 @@ namespace Foodics.Controllers
             });
         }
 
+
+        [Authorize(Roles = "Admin")]
         // Delete Category
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategory(int id)

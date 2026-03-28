@@ -13,7 +13,7 @@ namespace Foodics.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    //[Authorize(Roles = "Cashier,Admin")] // فقط الكاشير أو الأدمن
+    //[Authorize(Roles = "Admin")] // فقط الكاشير أو الأدمن
     public class AdminOrdersController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -61,7 +61,7 @@ namespace Foodics.Controllers
         public async Task<IActionResult> SyncOfflineOrders()
         {
             var offlineOrders = _offlineService.GetOfflineOrders();
-            var successList = new List<int>();
+            var successOrders = new List<object>();
             var failedList = new List<string>();
 
             foreach (var offlineOrder in offlineOrders)
@@ -75,12 +75,24 @@ namespace Foodics.Controllers
 
                 var (success, orderId, errorMessage) = await CreateOrderInternal(createDto);
 
-                if (success) successList.Add(orderId.Value);
-                else failedList.Add($"{offlineOrder.CustomerCode}: {errorMessage}");
+                if (success)
+                {
+                    successOrders.Add(new
+                    {
+                        orderId = orderId,
+                        customerCode = offlineOrder.CustomerCode,
+                        itemsCount = offlineOrder.Items.Count,
+                        createdAt = offlineOrder.CreatedAt
+                    });
+                }
+                else
+                {
+                    failedList.Add($"{offlineOrder.CustomerCode}: {errorMessage}");
+                }
             }
 
-            _offlineService.DeleteOfflineOrders(successList); // احذف الأوردرات الناجحة
-            return Ok(new { message = "Offline orders sync completed", syncedOrders = successList.Count, failedOrders = failedList });
+                _offlineService.DeleteOfflineOrders(successOrders); // احذف الأوردرات الناجحة
+            return Ok(new { message = "Offline orders sync completed", syncedOrders = successOrders.Count, failedOrders = failedList });
         }
 
         [HttpGet("get-orders")]
@@ -225,6 +237,7 @@ namespace Foodics.Controllers
                 CreatedAt = DateTime.UtcNow,
                 TotalAmount = orderTotalAmount,
                 OrderItems = orderItems,
+                PointsEarned = orderTotalPoints, 
                 Payment = new Payment
                 {
                     Amount = orderTotalAmount,
@@ -242,7 +255,7 @@ namespace Foodics.Controllers
                 Order = order,
                 Points = orderTotalPoints,
                 Type = "Earn",
-                WeekStartDate = DateTime.UtcNow.StartOfWeek(),
+              //  WeekStartDate = DateTime.UtcNow.StartOfWeek(),
                 CreatedAt = DateTime.UtcNow
             };
             _context.PointsTransactions.Add(pointsTransaction);
@@ -256,7 +269,13 @@ namespace Foodics.Controllers
             try
             {
                 await _context.SaveChangesAsync();
-                return Ok(new { message = "Order created successfully", orderId = order.Id, totalAmount, pointsEarned = totalPoints });
+                return new
+                {
+                    message = "Order created successfully",
+                    orderId = order.Id,
+                    totalAmount = orderTotalAmount,
+                    pointsEarned = orderTotalPoints
+                };
             }
             catch (Exception ex)
             {
@@ -266,15 +285,18 @@ namespace Foodics.Controllers
 
         private bool IsInternetAvailable()
         {
-            try
-            {
-                using (var ping = new Ping())
-                {
-                    var reply = ping.Send("8.8.8.8", 1000);
-                    return reply.Status == IPStatus.Success;
-                }
-            }
-            catch { return false; }
+            //try
+            //{
+            //    using (var ping = new Ping())
+            //    {
+            //        var reply = ping.Send("8.8.8.8", 1000);
+            //        return reply.Status == IPStatus.Success;
+            //    }
+            //}
+            //catch { return false; }
+
+
+            return false;
         }
 
 

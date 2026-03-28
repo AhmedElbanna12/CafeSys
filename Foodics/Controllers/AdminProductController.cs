@@ -12,7 +12,6 @@ namespace Foodics.Controllers
 {
     [Route("api/admin/products")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
 
     public class AdminProductsController : ControllerBase
     {
@@ -26,6 +25,10 @@ namespace Foodics.Controllers
 
         }
 
+
+
+
+        [Authorize(Roles = "Admin")]
         // Create Product with Image Upload
         [HttpPost]
         [RequestSizeLimit(10_000_000)] // 10 MB limit
@@ -74,6 +77,8 @@ namespace Foodics.Controllers
             });
         }
 
+
+        [Authorize(Roles = "Admin")]
         [HttpPost("{productId}/sizes")]
         public async Task<IActionResult> AddSize(int productId, CreateSizeDto dto)
         {
@@ -140,6 +145,9 @@ namespace Foodics.Controllers
             return Ok(result);
         }
 
+
+
+        [Authorize(Roles = "Admin")]
         [HttpPost("{productId}/modifier-groups")]
         public async Task<IActionResult> CreateModifierGroup(int productId, CreateModifierGroupDto dto)
         {
@@ -171,8 +179,10 @@ namespace Foodics.Controllers
             return Ok(result);
         }
 
+
+        [Authorize(Roles = "Admin")]
         // Add Modifier Option
-      [HttpPost("modifier-groups/{groupId}/options")]
+        [HttpPost("modifier-groups/{groupId}/options")]
 public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto dto)
 {
     var group = await _context.ModifierGroups.FindAsync(groupId);
@@ -320,6 +330,9 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
             return Ok(result);
         }
 
+
+
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         [RequestSizeLimit(10_000_000)] // 10 MB limit
         public async Task<IActionResult> UpdateProduct(int id, [FromForm] UpdateProductDto dto)
@@ -417,6 +430,8 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
             return Ok(result);
         }
 
+
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
@@ -433,6 +448,8 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
         }
 
 
+
+        [Authorize(Roles = "Admin")]
         [HttpPatch("{id}/toggle-availability")]
         public async Task<IActionResult> ToggleAvailability(int id)
         {
@@ -453,6 +470,8 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
             });
         }
 
+
+        [Authorize(Roles = "Admin")]
         [HttpPut("sizes/{sizeId}")]
         public async Task<IActionResult> UpdateSize(int sizeId, UpdateSizeDto dto)
         {
@@ -480,7 +499,7 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
         }
 
 
-
+        [Authorize(Roles = "Admin")]
         [HttpPut("modifier-groups/{groupId}")]
         public async Task<IActionResult> UpdateModifierGroup(int groupId, UpdateModifierGroupDto dto)
         {
@@ -517,6 +536,8 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
             return Ok(result);
         }
 
+
+        [Authorize(Roles = "Admin")]
         // Update Modifier Option
         [HttpPut("modifier-options/{optionId}")]
         public async Task<IActionResult> UpdateModifierOption(int optionId, UpdateModifierOptionDto dto)

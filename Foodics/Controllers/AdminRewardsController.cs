@@ -45,7 +45,6 @@ namespace Foodics.Controllers.Admin
                 Name = reward.Name,
                 PointsRequired = reward.PointsRequired,
                 ProductId = reward.ProductId,
-                ProductName = reward.Product?.Name,
                 IsActive = reward.IsActive
             });
         }
@@ -54,25 +53,39 @@ namespace Foodics.Controllers.Admin
         [HttpGet]
         public async Task<IActionResult> GetRewards()
         {
-            var rewards = await _context.Rewards
-                .Include(r => r.Product)
-                .ToListAsync();
+            var rewards = await _context.Rewards.ToListAsync();
 
-            return Ok(rewards);
+            var result = rewards.Select(r => new RewardResponseDto
+            {
+                Id = r.Id,
+                Name = r.Name,
+                PointsRequired = r.PointsRequired,
+                ProductId = r.ProductId,   // بس ID
+                IsActive = r.IsActive
+            });
+
+            return Ok(result);
         }
 
         // Get Reward By Id
         [HttpGet("{id}")]
         public async Task<IActionResult> GetReward(int id)
         {
-            var reward = await _context.Rewards
-                .Include(r => r.Product)
-                .FirstOrDefaultAsync(r => r.Id == id);
+            var reward = await _context.Rewards.FindAsync(id);
 
             if (reward == null)
                 return NotFound("Reward not found");
 
-            return Ok(reward);
+            var result = new RewardResponseDto
+            {
+                Id = reward.Id,
+                Name = reward.Name,
+                PointsRequired = reward.PointsRequired,
+                ProductId = reward.ProductId,
+                IsActive = reward.IsActive
+            };
+
+            return Ok(result);
         }
 
         // Update Reward
@@ -91,7 +104,16 @@ namespace Foodics.Controllers.Admin
 
             await _context.SaveChangesAsync();
 
-            return Ok(reward);
+            var result = new RewardResponseDto
+            {
+                Id = reward.Id,
+                Name = reward.Name,
+                PointsRequired = reward.PointsRequired,
+                ProductId = reward.ProductId,
+                IsActive = reward.IsActive
+            };
+
+            return Ok(result);
         }
 
         // Toggle Reward

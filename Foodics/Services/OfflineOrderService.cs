@@ -34,7 +34,7 @@ namespace Foodics.Services
                 JsonConvert.SerializeObject(orders, Formatting.Indented));
         }
 
-        public void DeleteOfflineOrders(List<int> syncedIds)
+        public void DeleteOfflineOrders(List<Object> syncedIds)
         {
             var orders = GetOfflineOrders();
 

@@ -15,7 +15,6 @@ namespace POSSystem.Data
         public DbSet<POSDevice> POSDevices { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Product> Products { get; set; }
-
         public DbSet<ProductSize> ProductSizes { get; set; }
         public DbSet<ModifierGroup> ModifierGroups { get; set; }
         public DbSet<ModifierOption> ModifierOptions { get; set; }
@@ -36,8 +35,11 @@ namespace POSSystem.Data
         public DbSet<RedeemedReward> RedeemedRewards { get; set; }
 
         public DbSet<UserPoints> UserPoints { get; set; }
+        public DbSet<OtpCode> OtpCode { get; set; }
 
+        public DbSet<Advertisement> Advertisements { get; set; }
 
+        
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

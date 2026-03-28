@@ -1,5 +1,6 @@
 ﻿
 using DotNetEnv;
+using Foodics.Dtos.Auth;
 using Foodics.Models;
 using Foodics.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -39,6 +40,15 @@ namespace Foodics
                 .AddDefaultTokenProviders();
 
             builder.Services.AddScoped<JwtService>();
+            //builder.Services.AddScoped<SmsService>();
+
+            //builder.Services.Configure<TwilioSettings>(options =>
+            //{
+            //    options.AccountSid = Environment.GetEnvironmentVariable("TWILIO_ACCOUNT_SID");
+            //    options.AuthToken = Environment.GetEnvironmentVariable("TWILIO_AUTH_TOKEN");
+            //    options.FromNumber = Environment.GetEnvironmentVariable("TWILIO_FROM_NUMBER");
+            //});
+         
             var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY");
 
             if (string.IsNullOrEmpty(jwtKey))
