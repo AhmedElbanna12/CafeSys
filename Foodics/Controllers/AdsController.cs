@@ -1,5 +1,6 @@
 ﻿using Foodics.Dtos.Adv;
 using Foodics.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -40,6 +41,8 @@ namespace Foodics.Controllers
             return Ok(ads);
         }
 
+
+        [Authorize(Roles = "Admin")]
         // POST: api/Ads
         [HttpPost]
         public async Task<IActionResult> CreateAd([FromForm] CreateAdDto dto)
@@ -81,6 +84,9 @@ namespace Foodics.Controllers
             });
         }
 
+
+
+        [Authorize(Roles = "Admin")]
         // DELETE: api/Ads/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAd(int id)

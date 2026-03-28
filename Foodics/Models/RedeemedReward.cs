@@ -18,5 +18,6 @@ namespace Foodics.Models
 
         public int PointsUsed { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public bool IsUsed { get;  set; }
     }
 }
