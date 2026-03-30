@@ -23,5 +23,7 @@
         public List<ProductSizeDto> Sizes { get; set; }
 
         public List<ModifierGroupDto> ModifierGroups { get; set; }
+
+       public decimal DiscountedPrice { get; set; }
     }
 }

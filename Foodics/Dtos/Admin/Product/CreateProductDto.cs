@@ -8,6 +8,9 @@
 
         public decimal Price { get; set; }
 
+        public decimal? DiscountPercentage { get; set; }
+        public DateTime? DiscountStart { get; set; }
+        public DateTime? DiscountEnd { get; set; }
         public int CategoryId { get; set; }
 
         public int Calories { get; set; }

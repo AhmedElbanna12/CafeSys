@@ -87,6 +87,62 @@ namespace Foodics.Controllers
 
 
         [Authorize(Roles = "Admin")]
+        // PUT: api/Ads/{id}
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateAd(int id, [FromForm] UpdateAdDto dto)
+        {
+            var ad = await _context.Advertisements.FindAsync(id);
+
+            if (ad == null)
+                return NotFound("Ad not found");
+
+            // تحديث البيانات الأساسية
+            if (!string.IsNullOrEmpty(dto.Title))
+                ad.Title = dto.Title;
+
+            if (!string.IsNullOrEmpty(dto.Description))
+                ad.Description = dto.Description;
+
+            // لو في صورة جديدة
+            if (dto.Image != null && dto.Image.Length > 0)
+            {
+                // حذف الصورة القديمة
+                if (!string.IsNullOrEmpty(ad.ImagePath) && System.IO.File.Exists(ad.ImagePath))
+                {
+                    System.IO.File.Delete(ad.ImagePath);
+                }
+
+                // حفظ الصورة الجديدة
+                var webRoot = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+                var uploadsFolder = Path.Combine(webRoot, "images", "uploadsadv");
+
+                if (!Directory.Exists(uploadsFolder))
+                    Directory.CreateDirectory(uploadsFolder);
+
+                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(dto.Image.FileName)}";
+                var filePath = Path.Combine(uploadsFolder, fileName);
+
+                using var stream = new FileStream(filePath, FileMode.Create);
+                await dto.Image.CopyToAsync(stream);
+
+                ad.ImagePath = filePath;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new AdDto
+            {
+                Id = ad.Id,
+                Title = ad.Title,
+                Description = ad.Description,
+                ImageUrl = $"/uploads/{Path.GetFileName(ad.ImagePath)}",
+                CreatedAt = ad.CreatedAt
+            });
+        }
+
+
+
+        [Authorize(Roles = "Admin")]
         // DELETE: api/Ads/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteAd(int id)

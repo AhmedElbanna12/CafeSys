@@ -7,7 +7,9 @@
         public string Description { get; set; }
 
 
-
+        public decimal? DiscountPercentage { get; set; }
+        public DateTime? DiscountStart { get; set; }
+        public DateTime? DiscountEnd { get; set; }
         public decimal Price { get; set; }
 
         public int Calories { get; set; }

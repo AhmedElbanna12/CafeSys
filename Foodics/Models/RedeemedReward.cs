@@ -15,9 +15,9 @@ namespace Foodics.Models
         [ForeignKey("Reward")]
         public int RewardId { get; set; }
         public Reward Reward { get; set; }
-
         public int PointsUsed { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? UsedAt { get; set; }
         public bool IsUsed { get;  set; }
     }
 }
