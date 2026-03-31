@@ -701,5 +701,50 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
             });
         }
 
+
+        /// <summary>
+        /// Get Top Selling Products
+        /// </summary>
+        /// <param name="count">Number of products to return (default = 10)</param>
+        /// <param name="days">Filter by last X days (optional)</param>
+        [HttpGet("top-selling")]
+        public async Task<IActionResult> GetTopSellingProducts(int count = 10, int? days = null)
+        {
+            var query = _context.OrderItems
+                .Include(oi => oi.Order)
+                .AsQueryable();
+
+            // ✅ فلترة بالتاريخ (اختياري)
+            if (days.HasValue)
+            {
+                var fromDate = DateTime.UtcNow.AddDays(-days.Value);
+                query = query.Where(oi => oi.Order.CreatedAt >= fromDate);
+            }
+
+            var topProducts = await query
+                .GroupBy(oi => oi.ProductId)
+                .Select(g => new
+                {
+                    ProductId = g.Key,
+                    TotalSold = g.Sum(x => x.Quantity)
+                })
+                .OrderByDescending(x => x.TotalSold)
+                .Take(count)
+                .Join(_context.Products,
+                      g => g.ProductId,
+                      p => p.Id,
+                      (g, p) => new TopSellingProductDto
+                      {
+                          Id = p.Id,
+                          Name = p.Name,
+                          Price = p.Price,
+                          ImageUrl = p.ImageUrl,
+                          TotalSold = g.TotalSold
+                      })
+                .ToListAsync();
+
+            return Ok(topProducts);
+        }
+
     }
 }
