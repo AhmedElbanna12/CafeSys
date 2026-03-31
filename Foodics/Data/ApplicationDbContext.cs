@@ -39,7 +39,12 @@ namespace POSSystem.Data
 
         public DbSet<Advertisement> Advertisements { get; set; }
 
-        
+        public DbSet<Notification> Notifications { get; set; }
+
+
+
+
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

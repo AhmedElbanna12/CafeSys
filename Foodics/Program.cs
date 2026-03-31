@@ -1,8 +1,11 @@
 ﻿
 using DotNetEnv;
+using FirebaseAdmin;
 using Foodics.Dtos.Auth;
+using Foodics.Hub;
 using Foodics.Models;
 using Foodics.Services;
+using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -48,7 +51,7 @@ namespace Foodics
             //    options.AuthToken = Environment.GetEnvironmentVariable("TWILIO_AUTH_TOKEN");
             //    options.FromNumber = Environment.GetEnvironmentVariable("TWILIO_FROM_NUMBER");
             //});
-         
+
             var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY");
 
             if (string.IsNullOrEmpty(jwtKey))
@@ -91,12 +94,17 @@ namespace Foodics
 
 
             builder.Services.AddControllers();
+            builder.Services.AddSignalR();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            var app = builder.Build();
 
+
+
+
+
+            var app = builder.Build();
 
             // Seed Data
             using (var scope = app.Services.CreateScope())
@@ -106,7 +114,7 @@ namespace Foodics
                 var userManager = services.GetRequiredService<UserManager<User>>();
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
-                await SeedData.InitializeAsync(context, userManager, roleManager, adminEmail, adminPassword , adminphonenumber);
+                await SeedData.InitializeAsync(context, userManager, roleManager, adminEmail, adminPassword, adminphonenumber);
             }
 
             // Configure the HTTP request pipeline.
@@ -117,12 +125,13 @@ namespace Foodics
             }
 
             app.UseHttpsRedirection();
-
-            app.UseStaticFiles(); 
-            app.UseAuthentication();
-            app.UseAuthorization();
+            app.UseStaticFiles();
+            app.UseRouting();          // الأول
+            app.UseAuthentication();   // التاني
+            app.UseAuthorization();    // التالت
 
             app.MapControllers();
+            app.MapHub<NotificationHub>("/notificationHub");  // بدل UseEndpoints
 
             app.Run();
         }
