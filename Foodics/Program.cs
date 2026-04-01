@@ -5,6 +5,7 @@ using Foodics.Dtos.Auth;
 using Foodics.Hub;
 using Foodics.Models;
 using Foodics.Services;
+using Foodics.Services.Interfaces;
 using Google.Apis.Auth.OAuth2;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -101,8 +102,17 @@ namespace Foodics
 
 
 
+            // ✅ وحطّ ده بدله
+            builder.Services.Configure<EmailSettings>(options =>
+            {
+                options.Email = Environment.GetEnvironmentVariable("EMAIL_SETTINGS__EMAIL");
+                options.Password = Environment.GetEnvironmentVariable("EMAIL_SETTINGS__PASSWORD");
+                options.Host = Environment.GetEnvironmentVariable("EMAIL_SETTINGS__HOST");
+                options.Port = int.Parse(Environment.GetEnvironmentVariable("EMAIL_SETTINGS__PORT") ?? "587");
+            });
 
 
+            builder.Services.AddScoped<IEmailService, EmailService>();
 
             var app = builder.Build();
 
