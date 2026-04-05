@@ -49,6 +49,16 @@ namespace POSSystem.Data
         {
             base.OnModelCreating(builder);
 
+
+
+            builder.Entity<OrderItem>()
+                .Property(o => o.DiscountAmount)
+                .HasPrecision(18, 2);
+
+            builder.Entity<Product>()
+                .Property(p => p.DiscountPercentage)
+                .HasPrecision(5, 2); // مثلا 99.99%
+
             // تأكد من uniqueness على PhoneNumber
             builder.Entity<User>()
                 .HasIndex(u => u.PhoneNumber)

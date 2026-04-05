@@ -105,10 +105,10 @@ namespace Foodics
             // ✅ وحطّ ده بدله
             builder.Services.Configure<EmailSettings>(options =>
             {
-                options.Email = Environment.GetEnvironmentVariable("EMAIL_SETTINGS__EMAIL");
-                options.Password = Environment.GetEnvironmentVariable("EMAIL_SETTINGS__PASSWORD");
-                options.Host = Environment.GetEnvironmentVariable("EMAIL_SETTINGS__HOST");
-                options.Port = int.Parse(Environment.GetEnvironmentVariable("EMAIL_SETTINGS__PORT") ?? "587");
+                options.Email = Environment.GetEnvironmentVariable("EMAIL_SETTINGS_EMAIL") ?? string.Empty;
+                options.Password = Environment.GetEnvironmentVariable("EMAIL_SETTINGS_PASSWORD") ?? string.Empty;
+                options.Host = Environment.GetEnvironmentVariable("EMAIL_SETTINGS_HOST") ?? "smtp.gmail.com";
+                options.Port = int.Parse(Environment.GetEnvironmentVariable("EMAIL_SETTINGS_PORT") ?? "587");
             });
 
 
@@ -134,9 +134,13 @@ namespace Foodics
                 app.UseSwaggerUI();
             }
 
+            app.UseDeveloperExceptionPage(); //temp 
+
+
             app.UseHttpsRedirection();
             app.UseStaticFiles();
             app.UseRouting();          // الأول
+           // app.UseRateLimiter();      // ✅ لازم بعد UseRouting
             app.UseAuthentication();   // التاني
             app.UseAuthorization();    // التالت
 
