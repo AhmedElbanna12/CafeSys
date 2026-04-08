@@ -33,7 +33,8 @@ namespace Foodics.Controllers
                     Id = a.Id,
                     Title = a.Title,
                     Description = a.Description,
-                    ImageUrl = $"/uploads/{Path.GetFileName(a.ImagePath)}",
+                    // full URL for image
+                    ImageUrl = $"{Request.Scheme}://{Request.Host}/images/uploadsadv/{Path.GetFileName(a.ImagePath)}",
                     CreatedAt = a.CreatedAt
                 })
                 .ToListAsync();
