@@ -16,6 +16,9 @@ namespace Foodics.Models
         [ForeignKey("ModifierOption")]
         public int ModifierOptionId { get; set; }
 
-        public ModifierOption ModifierOption { get; set; } 
+        public ModifierOption ModifierOption { get; set; }
+
+        public decimal Price { get; set; }
+
     }
 }

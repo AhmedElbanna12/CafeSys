@@ -1,6 +1,7 @@
 ﻿using Foodics.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection.Emit;
 
 namespace POSSystem.Data
 {
@@ -41,15 +42,28 @@ namespace POSSystem.Data
 
         public DbSet<Notification> Notifications { get; set; }
 
+        public DbSet<Cart> Carts { get; set; }
+        public DbSet<CartItem> CartItems { get; set; }
+        public DbSet<CartItemModifier> CartItemModifiers { get; set; }
 
-
-
-
+        public DbSet<PromoCode> PromoCodes { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
 
 
+            builder.Entity<CartItemModifier>()
+    .HasOne(c => c.ModifierOption)
+    .WithMany()
+    .HasForeignKey(c => c.ModifierOptionId)
+    .OnDelete(DeleteBehavior.Restrict); // NO ACTION
+
+
+            builder.Entity<CartItemModifier>()
+    .HasOne(c => c.CartItem)
+    .WithMany(c => c.Modifiers)
+    .HasForeignKey(c => c.CartItemId)
+    .OnDelete(DeleteBehavior.Cascade); // مسموح cascade
 
             builder.Entity<OrderItem>()
                 .Property(o => o.DiscountAmount)
@@ -137,19 +151,19 @@ namespace POSSystem.Data
      .HasForeignKey(oim => oim.OrderItemId)
      .OnDelete(DeleteBehavior.Restrict);
 
-            // Orders → POSDevice
-            builder.Entity<Order>()
-                .HasOne(o => o.POSDevice)
-                .WithMany(p => p.Orders)
-                .HasForeignKey(o => o.POSDeviceId)
-                .OnDelete(DeleteBehavior.Restrict);
+            //// Orders → POSDevice
+            //builder.Entity<Order>()
+            //    .HasOne(o => o.POSDevice)
+            //    .WithMany(p => p.Orders)
+            //    .HasForeignKey(o => o.POSDeviceId)
+            //    .OnDelete(DeleteBehavior.Restrict);
 
-            // Orders → Branch
-            builder.Entity<Order>()
-                .HasOne(o => o.Branch)
-                .WithMany(b => b.Orders)
-                .HasForeignKey(o => o.BranchId)
-                .OnDelete(DeleteBehavior.Restrict);
+            //// Orders → Branch
+            //builder.Entity<Order>()
+            //    .HasOne(o => o.Branch)
+            //    .WithMany(b => b.Orders)
+            //    .HasForeignKey(o => o.BranchId)
+            //    .OnDelete(DeleteBehavior.Restrict);
 
             // Orders → Payment (One to One)
             builder.Entity<Order>()

@@ -4,8 +4,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using AppUser = Foodics.Models.User;
 
-namespace Foodics.Controllers
+namespace Foodics.Controllers.Admin
 {
     [Route("api/[controller]")]
     [ApiController]
@@ -13,9 +14,9 @@ namespace Foodics.Controllers
 
     public class AdminUsersController : ControllerBase
     {
-        private readonly UserManager<User> _userManager;
+        private readonly UserManager<AppUser> _userManager;
 
-        public AdminUsersController(UserManager<User> userManager)
+        public AdminUsersController(UserManager<AppUser> userManager)
         {
             _userManager = userManager;
         }

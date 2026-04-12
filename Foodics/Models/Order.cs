@@ -1,8 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Foodics.Models
 {
+    [Index(nameof(UserId))]
     public class Order
     {
         [Key]
@@ -12,22 +14,57 @@ namespace Foodics.Models
         public string UserId { get; set; }
         public User User { get; set; }
 
-        [ForeignKey("Branch")]
-        public int BranchId { get; set; }
-        public Branch Branch { get; set; }
-
-        [ForeignKey("POSDevice")]
-        public int POSDeviceId { get; set; }
-        public POSDevice POSDevice { get; set; }
-
+        public decimal SubTotal { get; set; }
+        public decimal DiscountAmount { get; set; }
         public decimal TotalAmount { get; set; }
-        public string Status { get; set; } // Pending / Completed / Cancelled
-        public string PaymentStatus { get; set; } // Paid / Unpaid
         public int PointsEarned { get; set; }
         public int PointsRedeemed { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public ICollection<OrderItem> OrderItems { get; set; }
-        public Payment Payment { get; set; }
+        public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+
+        public int? PaymentId { get; set; }
+
+
+        [InverseProperty("Order")]
+        public Payment? Payment { get; set; }
+        public OrderStatus OrderStatus { get; set; } = OrderStatus.Pending;
+
+        public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
+
+        public PaymentMethod PaymentMethod { get; set; }
+        public string? TransactionId { get; set; }
+        public DateTime? CompletedAt { get; set; }
+        public string? ShippingAddress { get; set; }
+        public OrderType OrderType { get; internal set; }
+    }
+
+    public enum PaymentMethod
+    {
+        CashOnDelivery = 1,
+        Online = 2 , 
+        Onsite =3
+    }
+
+    public enum OrderStatus
+    {
+        Pending,
+        Completed,
+        Cancelled
+    }
+
+    public enum OrderType
+    {
+        Pickup = 1,      // عند الكاشير
+        Delivery = 2     // دليفري
+    }
+
+    public enum PaymentStatus
+    {
+        Unpaid,
+        Paid,
+        Failed,
+        Pending
     }
 }

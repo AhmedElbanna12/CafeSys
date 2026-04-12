@@ -27,7 +27,10 @@ namespace Foodics
             builder.Configuration.AddEnvironmentVariables();
             DotNetEnv.Env.Load();
 
-
+            builder.Services.AddControllers()
+    .AddJsonOptions(options => {
+        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+    });
             // Access variables
             var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION");
             var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL");

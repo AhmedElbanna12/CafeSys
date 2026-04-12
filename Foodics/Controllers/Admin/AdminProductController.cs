@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using POSSystem.Data;
 
-namespace Foodics.Controllers
+namespace Foodics.Controllers.Admin
 {
     [Route("api/admin/products")]
     [ApiController]

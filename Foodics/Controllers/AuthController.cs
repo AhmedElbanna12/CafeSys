@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using QRCoder;
 using System.Drawing.Imaging;
 using System.Net;
+using AppUser = Foodics.Models.User;
 
 namespace Foodics.Controllers
 {
@@ -15,16 +16,16 @@ namespace Foodics.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly UserManager<User> _userManager;
-        private readonly SignInManager<User> _signInManager;
+        private readonly UserManager<AppUser> _userManager;
+        private readonly SignInManager<AppUser> _signInManager;
         private readonly JwtService _jwtService;
         private readonly IEmailService _emailService; 
 
 
 
         public AuthController(
-            UserManager<User> userManager,
-            SignInManager<User> signInManager,
+            UserManager<AppUser> userManager,
+            SignInManager<AppUser> signInManager,
             JwtService jwtService,
             IEmailService emailService)
         {
@@ -56,7 +57,7 @@ namespace Foodics.Controllers
             // إنشاء CustomerCode فريد
             var customerCode = Guid.NewGuid().ToString("N").ToUpper();
 
-            var user = new User
+            var user = new  AppUser
             {
                 FullName = model.FullName,
                 UserName = model.Email,

@@ -182,7 +182,7 @@ namespace Foodics.Controllers.Admin
 
             // حساب نقاط المستخدم
             var totalPoints = await _context.Orders
-                .Where(o => o.UserId == userId && o.Status == "Completed")
+                .Where(o => o.UserId == userId && o.OrderStatus == OrderStatus.Completed)
                 .SumAsync(o => o.PointsEarned);
 
             var usedPoints = await _context.RedeemedRewards
@@ -229,7 +229,7 @@ namespace Foodics.Controllers.Admin
                 return NotFound("Reward not found or inactive");
 
             var totalPoints = await _context.Orders
-                .Where(o => o.UserId == userId && o.Status == "Completed")
+                .Where(o => o.UserId == userId && o.OrderStatus == OrderStatus.Completed)
                 .SumAsync(o => o.PointsEarned);
 
             var usedPoints = await _context.RedeemedRewards

@@ -3,16 +3,17 @@ using Microsoft.AspNet.SignalR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using AppUser = Foodics.Models.User;
 
-namespace Foodics.Controllers
+namespace Foodics.Controllers.User
 {
     [Route("api/[controller]")]
     [ApiController]
     public class UsersController : ControllerBase
     {
-        private readonly UserManager<User> _userManager;
+        private readonly UserManager<AppUser> _userManager;
 
-        public UsersController(UserManager<User> userManager)
+        public UsersController(UserManager<AppUser> userManager)
         {
             _userManager = userManager;
         }

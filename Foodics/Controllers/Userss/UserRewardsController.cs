@@ -7,7 +7,7 @@ using POSSystem.Data;
 using QRCoder;
 using System.Drawing.Imaging;
 
-namespace Foodics.Controllers
+namespace Foodics.Controllers.User
 {
     [Route("api/[controller]")]
     [ApiController]
