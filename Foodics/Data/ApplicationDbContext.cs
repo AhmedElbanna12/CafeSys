@@ -47,6 +47,8 @@ namespace POSSystem.Data
         public DbSet<CartItemModifier> CartItemModifiers { get; set; }
 
         public DbSet<PromoCode> PromoCodes { get; set; }
+
+        public DbSet<AppSettings> AppSettings { get; set; }
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

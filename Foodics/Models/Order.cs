@@ -38,6 +38,9 @@ namespace Foodics.Models
         public DateTime? CompletedAt { get; set; }
         public string? ShippingAddress { get; set; }
         public OrderType OrderType { get; internal set; }
+
+        public decimal DeliveryFee { get; set; } 
+
     }
 
     public enum PaymentMethod

@@ -39,7 +39,8 @@ namespace Foodics.Controllers.Admin
             return Ok(orders);
         }
 
-        // 🔄 تحديث حالة الأوردر
+
+
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateOrderStatus(int id, OrderStatus status)
         {
@@ -49,10 +50,8 @@ namespace Foodics.Controllers.Admin
 
             if (order == null) return NotFound();
 
-            order.OrderStatus = status;
-
-            // ✅ لو الأوردر اتكمل → نضيف النقاط
-            if (status == OrderStatus.Completed)
+            // ✅ مهم: نتأكد إن دي أول مرة يتحول لـ Completed
+            if (order.OrderStatus != OrderStatus.Completed && status == OrderStatus.Completed)
             {
                 var user = await _userManager.FindByIdAsync(order.UserId);
 
@@ -66,24 +65,44 @@ namespace Foodics.Controllers.Admin
                         userPoints = new UserPoints
                         {
                             UserId = order.UserId,
-                            TotalPoints = order.PointsEarned,
+                            TotalPoints = 0,
                             UsedPoints = 0
                         };
 
                         _context.UserPoints.Add(userPoints);
                     }
-                    else
+
+                    // ✅ إضافة النقاط
+                    userPoints.TotalPoints += order.PointsEarned;
+
+                    // ✅ تسجيل Transaction (دي كانت ناقصة)
+                    var transactionExists = await _context.PointsTransactions
+                        .AnyAsync(t => t.OrderId == order.Id && t.Type == "Earn");
+
+                    if (!transactionExists)
                     {
-                        userPoints.TotalPoints += order.PointsEarned;
+                        var transaction = new PointsTransaction
+                        {
+                            UserId = order.UserId,
+                            OrderId = order.Id,
+                            Points = order.PointsEarned,
+                            Type = "Earn",
+                            WeekStartDate = DateTime.UtcNow.Date.AddDays(-(int)DateTime.UtcNow.DayOfWeek)
+                        };
+
+                        _context.PointsTransactions.Add(transaction);
                     }
                 }
 
-                // لو الدفع عند الاستلام → يبقى Paid
+                // الدفع عند الاستلام
                 if (order.PaymentMethod == PaymentMethod.CashOnDelivery)
                 {
                     order.PaymentStatus = PaymentStatus.Paid;
                 }
             }
+
+            // تحديث الحالة في الآخر
+            order.OrderStatus = status;
 
             await _context.SaveChangesAsync();
 

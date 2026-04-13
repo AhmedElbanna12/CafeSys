@@ -225,7 +225,7 @@ namespace Foodics.Controllers
             if (cart == null || cart.Items == null || !cart.Items.Any())
                 return BadRequest("Cart is empty");
 
-            // حساب المجموع قبل أي خصم
+            // 🔹 حساب SubTotal
             decimal subTotal = 0;
             foreach (var item in cart.Items)
             {
@@ -234,38 +234,54 @@ namespace Foodics.Controllers
                 subTotal += itemTotal;
             }
 
+            // 🔹 حساب الخصم
             decimal discountAmount = 0;
             if (!string.IsNullOrEmpty(dto.PromoCode))
             {
-                // تحقق من وجود PromoCode في قاعدة البيانات
-                var promo = await _context.PromoCodes.FirstOrDefaultAsync(p => p.Code == dto.PromoCode && p.IsActive);
+                var promo = await _context.PromoCodes
+                    .FirstOrDefaultAsync(p => p.Code == dto.PromoCode && p.IsActive);
+
                 if (promo != null)
                 {
                     discountAmount = subTotal * (promo.DiscountAmount / 100m);
                 }
             }
 
-            decimal totalAmount = subTotal - discountAmount;
+            // 🔥 حساب الدليفري
+            decimal deliveryFee = 0;
 
-            // حساب النقاط المكتسبة بعد الخصم
-            int pointsEarned = (int)(totalAmount / 10); // مثال: 1 نقطة لكل 10 وحدة
+            if (dto.OrderType == OrderType.Delivery)
+            {
+                var settings = await _context.AppSettings.FirstOrDefaultAsync();
+                deliveryFee = settings?.DeliveryFee ?? 50; // fallback
+            }
+
+            // 🔥 الحساب النهائي
+            decimal totalAmount = subTotal - discountAmount + deliveryFee;
+
+            // 🔹 حساب النقاط
+            int pointsEarned = (int)(totalAmount / 10);
 
             var order = new Order
             {
                 UserId = userId,
                 SubTotal = subTotal,
                 DiscountAmount = discountAmount,
+                DeliveryFee = deliveryFee, // 👈 جديد
                 TotalAmount = totalAmount,
                 OrderStatus = OrderStatus.Pending,
-                PaymentStatus = dto.PaymentMethod == PaymentMethod.CashOnDelivery ? PaymentStatus.Unpaid : PaymentStatus.Unpaid,
+                PaymentStatus = dto.PaymentMethod == PaymentMethod.CashOnDelivery
+                    ? PaymentStatus.Unpaid
+                    : PaymentStatus.Unpaid,
                 PaymentMethod = dto.PaymentMethod,
-                OrderType = dto.OrderType ,  // Delivery or Pickup
+                OrderType = dto.OrderType,
                 ShippingAddress = dto.ShippingAddress,
                 PointsEarned = pointsEarned,
-                PointsRedeemed = dto.PointsRedeemed
+                PointsRedeemed = dto.PointsRedeemed,
+                OrderItems = new List<OrderItem>() // مهم عشان متحصلش null
             };
 
-            // تحويل CartItems إلى OrderItems
+            // 🔹 تحويل CartItems إلى OrderItems
             foreach (var cartItem in cart.Items)
             {
                 var orderItem = new OrderItem
@@ -282,23 +298,25 @@ namespace Foodics.Controllers
                         Price = m.Price
                     }).ToList()
                 };
+
                 order.OrderItems.Add(orderItem);
             }
 
             _context.Orders.Add(order);
 
-            // مسح الكارت بعد الأوردر
+            // 🗑 مسح الكارت
             _context.Carts.Remove(cart);
 
             await _context.SaveChangesAsync();
 
-            // ترجع الـ Order مع حساب النقاط
+            // 🔹 Response
             return Ok(new
             {
                 order.Id,
                 order.UserId,
                 order.SubTotal,
                 order.DiscountAmount,
+                order.DeliveryFee, // 👈 جديد
                 order.TotalAmount,
                 order.PointsEarned,
                 Items = order.OrderItems.Select(oi => new
