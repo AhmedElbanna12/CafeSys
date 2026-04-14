@@ -115,6 +115,29 @@ namespace Foodics
             });
 
 
+
+
+            // 7. الـ CORS (تعديلات زمايلك المهمة)
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowFrontend", policy =>
+                {
+                    policy.WithOrigins(
+                            
+                             "https://cafe-app-amber.vercel.app" ,
+                              "http://localhost:3000",
+                              "http://localhost:5173",
+                              "http://localhost:4173",
+                              "http://192.168.1.96:5173",
+                              "https://localhost:7171"
+                          )
+                          .AllowAnyHeader()
+                          .AllowAnyMethod()
+                          .AllowCredentials();
+                });
+            });
+
+
             builder.Services.AddScoped<IEmailService, EmailService>();
 
             var app = builder.Build();
@@ -142,10 +165,13 @@ namespace Foodics
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();
+            app.UseCors("AllowFrontend"); 
             app.UseRouting();          // الأول
            // app.UseRateLimiter();      // ✅ لازم بعد UseRouting
             app.UseAuthentication();   // التاني
             app.UseAuthorization();    // التالت
+
+
 
             app.MapControllers();
             app.MapHub<NotificationHub>("/notificationHub");  // بدل UseEndpoints
