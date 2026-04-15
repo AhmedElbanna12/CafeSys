@@ -760,6 +760,7 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
         }
 
 
+
         [Authorize(Roles = "Admin")]
         [HttpDelete("sizes/{sizeId}")]
         public async Task<IActionResult> DeleteSize(int sizeId)
@@ -767,13 +768,31 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
             var size = await _context.ProductSizes.FindAsync(sizeId);
 
             if (size == null)
-                return NotFound("Size not found");
+                return NotFound();
 
+            // 🔥 Remove from CartItems
+            var cartItems = await _context.CartItems
+                .Where(c => c.ProductSizeId == sizeId)
+                .ToListAsync();
+
+            _context.CartItems.RemoveRange(cartItems);
+
+            // 🔥 Remove from OrderItems (or just null it logically)
+            var orderItems = await _context.OrderItems
+                .Where(o => o.ProductSizeId == sizeId)
+                .ToListAsync();
+
+            foreach (var item in orderItems)
+                item.ProductSizeId = null;
+
+            // 🔥 Finally delete size
             _context.ProductSizes.Remove(size);
+
             await _context.SaveChangesAsync();
 
             return Ok("Size deleted successfully");
         }
+
 
         [Authorize(Roles = "Admin")]
         [HttpDelete("modifier-groups/{groupId}")]
@@ -786,7 +805,13 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
             if (group == null)
                 return NotFound("Modifier group not found");
 
-            // 🔥 delete options first (cascade safe)
+            var optionIds = group.Options.Select(o => o.Id).ToList();
+
+            var cartItems = _context.CartItemModifiers
+                .Where(c => optionIds.Contains(c.ModifierOptionId));
+
+            _context.CartItemModifiers.RemoveRange(cartItems);
+
             _context.ModifierOptions.RemoveRange(group.Options);
 
             _context.ModifierGroups.Remove(group);
@@ -806,12 +831,19 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
             if (option == null)
                 return NotFound("Modifier option not found");
 
+            // 🔥 delete cart references first
+            var cartItems = _context.CartItemModifiers
+                .Where(c => c.ModifierOptionId == optionId);
+
+            _context.CartItemModifiers.RemoveRange(cartItems);
+
+            // 🔥 delete option
             _context.ModifierOptions.Remove(option);
+
             await _context.SaveChangesAsync();
 
             return Ok("Modifier option deleted successfully");
         }
-
 
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]

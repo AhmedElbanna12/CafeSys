@@ -10,5 +10,7 @@ namespace Foodics.Dtos.Cart.Order
         public string? ShippingAddress { get; set; }
         public string? PromoCode { get; set; }
         public int PointsRedeemed { get; internal set; }
+
+        public int? RedeemedRewardId { get; set; }
     }
 }

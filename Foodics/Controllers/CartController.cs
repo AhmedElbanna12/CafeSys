@@ -208,13 +208,11 @@ namespace Foodics.Controllers
             });
         }
 
-        // ✅ Checkout / Create Order
         [HttpPost("checkout")]
         public async Task<IActionResult> Checkout(CheckoutDto dto)
         {
             var userId = GetUserId();
 
-            // جلب الكارت مع كل التفاصيل
             var cart = await _context.Carts
                 .Include(c => c.Items)
                     .ThenInclude(i => i.Modifiers)
@@ -222,112 +220,150 @@ namespace Foodics.Controllers
                     .ThenInclude(i => i.Product)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
 
-            if (cart == null || cart.Items == null || !cart.Items.Any())
+            if (cart == null || !cart.Items.Any())
                 return BadRequest("Cart is empty");
+
+            bool isRewardOrder = dto.RedeemedRewardId.HasValue;
+
+            RedeemedReward? redeemedReward = null;
+
+            // 🔥 لو Reward Order
+            if (isRewardOrder)
+            {
+                redeemedReward = await _context.RedeemedRewards
+                    .FirstOrDefaultAsync(r => r.Id == dto.RedeemedRewardId && r.UserId == userId);
+
+                if (redeemedReward == null)
+                    return BadRequest("Invalid reward");
+
+                if (redeemedReward.IsUsed)
+                    return BadRequest("Reward already used");
+            }
 
             // 🔹 حساب SubTotal
             decimal subTotal = 0;
-            foreach (var item in cart.Items)
+
+            if (!isRewardOrder)
             {
-                decimal itemTotal = item.Price * item.Quantity;
-                itemTotal += item.Modifiers.Sum(m => m.Price) * item.Quantity;
-                subTotal += itemTotal;
+                foreach (var item in cart.Items)
+                {
+                    decimal itemTotal = item.Price * item.Quantity;
+                    itemTotal += item.Modifiers.Sum(m => m.Price) * item.Quantity;
+                    subTotal += itemTotal;
+                }
             }
 
-            // 🔹 حساب الخصم
+            // 🔹 Promo
             decimal discountAmount = 0;
-            if (!string.IsNullOrEmpty(dto.PromoCode))
+
+            if (!string.IsNullOrEmpty(dto.PromoCode) && !isRewardOrder)
             {
                 var promo = await _context.PromoCodes
                     .FirstOrDefaultAsync(p => p.Code == dto.PromoCode && p.IsActive);
 
                 if (promo != null)
-                {
                     discountAmount = subTotal * (promo.DiscountAmount / 100m);
-                }
             }
 
-            // 🔥 حساب الدليفري
+            // 🔹 Delivery Fee
             decimal deliveryFee = 0;
 
             if (dto.OrderType == OrderType.Delivery)
             {
                 var settings = await _context.AppSettings.FirstOrDefaultAsync();
-                deliveryFee = settings?.DeliveryFee ?? 50; // fallback
+                deliveryFee = settings?.DeliveryFee ?? 50;
             }
 
-            // 🔥 الحساب النهائي
-            decimal totalAmount = subTotal - discountAmount + deliveryFee;
+            // 🔥 Total Calculation
+            decimal totalAmount;
 
-            // 🔹 حساب النقاط
-            int pointsEarned = (int)(totalAmount / 10);
+            if (isRewardOrder)
+            {
+                totalAmount = dto.OrderType == OrderType.Delivery ? deliveryFee : 0;
+            }
+            else
+            {
+                totalAmount = subTotal - discountAmount + deliveryFee;
+            }
+
+            // 🔹 Points
+            int pointsEarned = isRewardOrder ? 0 : (int)(totalAmount / 10);
 
             var order = new Order
             {
                 UserId = userId,
                 SubTotal = subTotal,
                 DiscountAmount = discountAmount,
-                DeliveryFee = deliveryFee, // 👈 جديد
+                DeliveryFee = deliveryFee,
                 TotalAmount = totalAmount,
                 OrderStatus = OrderStatus.Pending,
-                PaymentStatus = dto.PaymentMethod == PaymentMethod.CashOnDelivery
-                    ? PaymentStatus.Unpaid
-                    : PaymentStatus.Unpaid,
+                PaymentStatus = PaymentStatus.Unpaid,
                 PaymentMethod = dto.PaymentMethod,
                 OrderType = dto.OrderType,
                 ShippingAddress = dto.ShippingAddress,
                 PointsEarned = pointsEarned,
                 PointsRedeemed = dto.PointsRedeemed,
-                OrderItems = new List<OrderItem>() // مهم عشان متحصلش null
+                IsRewardOrder = isRewardOrder,
+                OrderItems = new List<OrderItem>()
             };
 
-            // 🔹 تحويل CartItems إلى OrderItems
-            foreach (var cartItem in cart.Items)
+            // 🔹 Items (skip لو reward order)
+            if (!isRewardOrder)
             {
-                var orderItem = new OrderItem
+                foreach (var cartItem in cart.Items)
                 {
-                    ProductId = cartItem.ProductId,
-                    ProductName = cartItem.Product.Name,
-                    ProductSizeId = cartItem.ProductSizeId,
-                    Quantity = cartItem.Quantity,
-                    UnitPrice = cartItem.Price,
-                    TotalPrice = (cartItem.Price + cartItem.Modifiers.Sum(m => m.Price)) * cartItem.Quantity,
-                    Modifiers = cartItem.Modifiers.Select(m => new OrderItemModifier
+                    var orderItem = new OrderItem
                     {
-                        ModifierOptionId = m.ModifierOptionId,
-                        Price = m.Price
-                    }).ToList()
-                };
+                        ProductId = cartItem.ProductId,
+                        ProductName = cartItem.Product.Name,
+                        ProductSizeId = cartItem.ProductSizeId,
+                        Quantity = cartItem.Quantity,
+                        UnitPrice = cartItem.Price,
+                        TotalPrice = (cartItem.Price + cartItem.Modifiers.Sum(m => m.Price)) * cartItem.Quantity,
+                        Modifiers = cartItem.Modifiers.Select(m => new OrderItemModifier
+                        {
+                            ModifierOptionId = m.ModifierOptionId,
+                            Price = m.Price
+                        }).ToList()
+                    };
 
-                order.OrderItems.Add(orderItem);
+                    order.OrderItems.Add(orderItem);
+                }
             }
 
             _context.Orders.Add(order);
 
-            // 🗑 مسح الكارت
-            _context.Carts.Remove(cart);
+            // 🔥 Mark reward as used
+            if (redeemedReward != null)
+            {
+                redeemedReward.IsUsed = true;
+                redeemedReward.UsedAt = DateTime.UtcNow;
+            }
+
+            // 🗑 Clear cart (only normal orders)
+            if (!isRewardOrder)
+            {
+                _context.Carts.Remove(cart);
+            }
 
             await _context.SaveChangesAsync();
 
-            // 🔹 Response
             return Ok(new
             {
                 order.Id,
                 order.UserId,
                 order.SubTotal,
                 order.DiscountAmount,
-                order.DeliveryFee, // 👈 جديد
+                order.DeliveryFee,
                 order.TotalAmount,
+                order.IsRewardOrder,
                 order.PointsEarned,
                 Items = order.OrderItems.Select(oi => new
                 {
                     oi.ProductId,
                     oi.ProductName,
-                    oi.ProductSizeId,
                     oi.Quantity,
-                    oi.UnitPrice,
-                    oi.TotalPrice,
-                    Modifiers = oi.Modifiers.Select(m => new { m.ModifierOptionId, m.Price })
+                    oi.TotalPrice
                 })
             });
         }
@@ -410,5 +446,72 @@ namespace Foodics.Controllers
 
             return Ok(response);
         }
+
+
+        [HttpDelete("clear")]
+        public async Task<IActionResult> ClearCart()
+        {
+            var userId = GetUserId();
+
+            var cart = await _context.Carts
+                .Include(c => c.Items)
+                    .ThenInclude(i => i.Modifiers)
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            if (cart == null)
+                return NotFound("Cart not found");
+
+            foreach (var item in cart.Items)
+            {
+                _context.CartItemModifiers.RemoveRange(item.Modifiers);
+            }
+
+            _context.CartItems.RemoveRange(cart.Items);
+
+            _context.Carts.Remove(cart);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Cart cleared successfully"
+            });
+        }
+
+
+        [HttpDelete("item/{id}")]
+        public async Task<IActionResult> DeleteCartItem(int id)
+        {
+            var userId = GetUserId();
+
+            var cart = await _context.Carts
+                .Include(c => c.Items)
+                    .ThenInclude(i => i.Modifiers)
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            if (cart == null)
+                return NotFound("Cart not found");
+
+            var item = cart.Items.FirstOrDefault(i => i.Id == id);
+
+            if (item == null)
+                return NotFound("Cart item not found");
+
+            // 🔥 امسح modifiers الأول (مهم عشان FK)
+            _context.CartItemModifiers.RemoveRange(item.Modifiers);
+
+            // 🔥 بعد كده امسح item
+            _context.CartItems.Remove(item);
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Item removed from cart successfully"
+            });
+        }
+
+
+
     }
 }

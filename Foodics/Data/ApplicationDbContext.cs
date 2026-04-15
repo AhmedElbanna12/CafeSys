@@ -60,6 +60,11 @@ namespace POSSystem.Data
     .HasForeignKey(c => c.ModifierOptionId)
     .OnDelete(DeleteBehavior.Restrict); // NO ACTION
 
+            builder.Entity<CartItem>()
+    .HasOne(c => c.ProductSize)
+    .WithMany()
+    .HasForeignKey(c => c.ProductSizeId)
+    .OnDelete(DeleteBehavior.SetNull);
 
             builder.Entity<CartItemModifier>()
     .HasOne(c => c.CartItem)
@@ -70,6 +75,12 @@ namespace POSSystem.Data
             builder.Entity<OrderItem>()
                 .Property(o => o.DiscountAmount)
                 .HasPrecision(18, 2);
+
+            builder.Entity<OrderItem>()
+    .HasOne(o => o.ProductSize)
+    .WithMany()
+    .HasForeignKey(o => o.ProductSizeId)
+    .OnDelete(DeleteBehavior.SetNull);
 
             builder.Entity<Product>()
                 .Property(p => p.DiscountPercentage)

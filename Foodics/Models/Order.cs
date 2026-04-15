@@ -39,8 +39,9 @@ namespace Foodics.Models
         public string? ShippingAddress { get; set; }
         public OrderType OrderType { get; internal set; }
 
-        public decimal DeliveryFee { get; set; } 
+        public decimal DeliveryFee { get; set; }
 
+        public bool IsRewardOrder { get; set; }
     }
 
     public enum PaymentMethod
