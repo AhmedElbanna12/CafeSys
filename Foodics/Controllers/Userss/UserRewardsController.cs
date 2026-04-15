@@ -81,21 +81,17 @@ namespace Foodics.Controllers.User
             if (availablePoints < reward.PointsRequired)
                 return BadRequest("Not enough points");
 
-            // إنشاء RedeemedReward
             var redeemed = new RedeemedReward
             {
                 UserId = userId,
                 RewardId = reward.Id,
                 PointsUsed = reward.PointsRequired,
                 IsUsed = false,
-                UsedAt = null, // ✅ تصحيح مهم
-                // يفضل تضيف CreatedAt في الموديل
-                // CreatedAt = DateTime.UtcNow
+                UsedAt = null
             };
 
             _context.RedeemedRewards.Add(redeemed);
 
-            // تسجيل Transaction نوع Redeem
             var transaction = new PointsTransaction
             {
                 UserId = userId,
@@ -108,17 +104,8 @@ namespace Foodics.Controllers.User
 
             await _context.SaveChangesAsync();
 
-            // توليد QR Code
-            var qrData = $"RedeemedReward:{redeemed.Id}:User:{userId}:Reward:{reward.Id}";
-
-            using var qrGenerator = new QRCodeGenerator();
-            var qrCodeData = qrGenerator.CreateQrCode(qrData, QRCodeGenerator.ECCLevel.Q);
-            using var qrCode = new QRCode(qrCodeData);
-            using var qrBitmap = qrCode.GetGraphic(20);
-
-            using var ms = new MemoryStream();
-            qrBitmap.Save(ms, ImageFormat.Png);
-            var qrBase64 = Convert.ToBase64String(ms.ToArray());
+            // 🔥 رابط الـ QR بدل base64
+            var qrUrl = $"{Request.Scheme}://{Request.Host}/api/userrewards/{redeemed.Id}/qr";
 
             return Ok(new
             {
@@ -128,7 +115,7 @@ namespace Foodics.Controllers.User
                 {
                     id = redeemed.Id,
                     isUsed = redeemed.IsUsed,
-                    createdAt = DateTime.UtcNow // أو CreatedAt لو ضفته
+                    createdAt = DateTime.UtcNow
                 },
 
                 reward = new
@@ -147,7 +134,47 @@ namespace Foodics.Controllers.User
 
                 qr = new
                 {
-                    rawData = qrData, // 🔥 مهم جدًا للـ testing و scanning
+                    url = qrUrl // ✅ ده اللي الفرونت يستخدمه مباشرة كـ image src
+                }
+            });
+        }
+
+
+        // GET: api/userrewards/{id}/qr
+        [HttpGet("{id}/qr")]
+        [Authorize]
+        public async Task<IActionResult> GetQrCode(int id)
+        {
+            var userId = User.FindFirst("userId")?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var redeemed = await _context.RedeemedRewards
+                .Include(r => r.Reward)
+                .FirstOrDefaultAsync(r => r.Id == id && r.UserId == userId);
+
+            if (redeemed == null)
+                return NotFound("Redeemed reward not found");
+
+            // 🔥 نفس الـ data القديمة
+            var qrData = $"RedeemedReward:{redeemed.Id}:User:{userId}:Reward:{redeemed.RewardId}";
+
+            using var qrGenerator = new QRCodeGenerator();
+            var qrCodeData = qrGenerator.CreateQrCode(qrData, QRCodeGenerator.ECCLevel.Q);
+            using var qrCode = new QRCode(qrCodeData);
+            using var qrBitmap = qrCode.GetGraphic(20);
+
+            using var ms = new MemoryStream();
+            qrBitmap.Save(ms, ImageFormat.Png);
+            var qrBase64 = Convert.ToBase64String(ms.ToArray());
+
+            return Ok(new
+            {
+                redeemedRewardId = redeemed.Id,
+
+                qr = new
+                {
+                    rawData = qrData,
                     base64 = $"data:image/png;base64,{qrBase64}"
                 }
             });

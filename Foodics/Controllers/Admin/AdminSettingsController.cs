@@ -9,7 +9,6 @@ namespace Foodics.Controllers.Admin
 {
     [ApiController]
     [Route("api/admin/settings")]
-    [Authorize(Roles = "Admin")]
     public class AdminSettingsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -19,6 +18,7 @@ namespace Foodics.Controllers.Admin
             _context = context;
         }
 
+        [Authorize]
         // 🔹 Get current settings
         [HttpGet]
         public async Task<IActionResult> GetSettings()
@@ -31,6 +31,8 @@ namespace Foodics.Controllers.Admin
             return Ok(settings);
         }
 
+
+        [Authorize(Roles = "Admin")]
         // 🔹 Update delivery fee
         [HttpPost("delivery-fee")]
         public async Task<IActionResult> UpdateDeliveryFee(decimal fee)

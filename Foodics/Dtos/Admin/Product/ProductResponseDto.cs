@@ -25,5 +25,11 @@
         public List<ModifierGroupDto> ModifierGroups { get; set; }
 
        public decimal DiscountedPrice { get; set; }
+
+        public decimal? DiscountPercentage { get; set; }
+
+        public DateTime? DiscountStart { get; set; }
+
+        public DateTime? DiscountEnd { get; set; }
     }
 }

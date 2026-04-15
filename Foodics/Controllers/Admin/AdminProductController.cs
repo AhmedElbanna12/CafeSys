@@ -279,8 +279,10 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
 }
 
 
+        
         // 🔹 Get all products with discounted price
         [HttpGet]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetProducts()
         {
             var products = await _context.Products
@@ -323,7 +325,10 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
                         ExtraPrice = o.ExtraPrice
                     }).ToList()
                 }).ToList(),
-                DiscountedPrice = CalculateDiscountedPrice(product)
+                DiscountedPrice = CalculateDiscountedPrice(product),
+                DiscountPercentage = product.DiscountPercentage,
+                DiscountStart = product.DiscountStart,
+                DiscountEnd = product.DiscountEnd,
             });
 
             return Ok(result);
@@ -331,6 +336,8 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
 
         // 🔹 Get product by Id with discounted price
         [HttpGet("product/{id}")]
+        [Authorize(Roles = "Admin")]
+
         public async Task<IActionResult> GetProductById(int id)
         {
             var product = await _context.Products
@@ -351,6 +358,9 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
                 Name = product.Name,
                 Description = product.Description,
                 Price = product.Price,
+                DiscountPercentage = product.DiscountPercentage,
+                DiscountStart = product.DiscountStart,
+                DiscountEnd = product.DiscountEnd,
                 Calories = product.Calories,
                 PointsReward = product.PointsReward,
                 ImageUrl = string.IsNullOrEmpty(product.ImageUrl) ? null : $"{baseUrl}{product.ImageUrl}",
@@ -452,6 +462,9 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
                 Name = updatedProduct.Name,
                 Description = updatedProduct.Description,
                 Price = updatedProduct.Price,
+                DiscountPercentage = updatedProduct.DiscountPercentage,
+                DiscountStart = updatedProduct.DiscountStart,
+                DiscountEnd = updatedProduct.DiscountEnd,
                 Calories = updatedProduct.Calories,
                 PointsReward = updatedProduct.PointsReward,
                 ImageUrl = string.IsNullOrEmpty(updatedProduct.ImageUrl) ? null : $"{baseUrl}{updatedProduct.ImageUrl}",
@@ -484,21 +497,21 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
         }
 
 
-        [Authorize(Roles = "Admin")]
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteProduct(int id)
-        {
-            var product = await _context.Products.FindAsync(id);
+        //[Authorize(Roles = "Admin")]
+        //[HttpDelete("{id}")]
+        //public async Task<IActionResult> DeleteProduct(int id)
+        //{
+        //    var product = await _context.Products.FindAsync(id);
 
-            if (product == null)
-                return NotFound("Product not found");
+        //    if (product == null)
+        //        return NotFound("Product not found");
 
-            _context.Products.Remove(product);
+        //    _context.Products.Remove(product);
 
-            await _context.SaveChangesAsync();
+        //    await _context.SaveChangesAsync();
 
-            return Ok("Product deleted successfully");
-        }
+        //    return Ok("Product deleted successfully");
+        //}
 
 
 
@@ -746,5 +759,87 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
             return Ok(topProducts);
         }
 
+
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("sizes/{sizeId}")]
+        public async Task<IActionResult> DeleteSize(int sizeId)
+        {
+            var size = await _context.ProductSizes.FindAsync(sizeId);
+
+            if (size == null)
+                return NotFound("Size not found");
+
+            _context.ProductSizes.Remove(size);
+            await _context.SaveChangesAsync();
+
+            return Ok("Size deleted successfully");
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("modifier-groups/{groupId}")]
+        public async Task<IActionResult> DeleteModifierGroup(int groupId)
+        {
+            var group = await _context.ModifierGroups
+                .Include(g => g.Options)
+                .FirstOrDefaultAsync(g => g.Id == groupId);
+
+            if (group == null)
+                return NotFound("Modifier group not found");
+
+            // 🔥 delete options first (cascade safe)
+            _context.ModifierOptions.RemoveRange(group.Options);
+
+            _context.ModifierGroups.Remove(group);
+
+            await _context.SaveChangesAsync();
+
+            return Ok("Modifier group deleted successfully");
+        }
+
+
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("modifier-options/{optionId}")]
+        public async Task<IActionResult> DeleteModifierOption(int optionId)
+        {
+            var option = await _context.ModifierOptions.FindAsync(optionId);
+
+            if (option == null)
+                return NotFound("Modifier option not found");
+
+            _context.ModifierOptions.Remove(option);
+            await _context.SaveChangesAsync();
+
+            return Ok("Modifier option deleted successfully");
+        }
+
+
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteProduct(int id)
+        {
+            var product = await _context.Products
+                .Include(p => p.Sizes)
+                .Include(p => p.ModifierGroups)
+                    .ThenInclude(g => g.Options)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (product == null)
+                return NotFound("Product not found");
+
+            // 🔥 delete nested data
+            foreach (var group in product.ModifierGroups)
+            {
+                _context.ModifierOptions.RemoveRange(group.Options);
+            }
+
+            _context.ModifierGroups.RemoveRange(product.ModifierGroups);
+            _context.ProductSizes.RemoveRange(product.Sizes);
+
+            _context.Products.Remove(product);
+
+            await _context.SaveChangesAsync();
+
+            return Ok("Product deleted successfully");
+        }
     }
 }

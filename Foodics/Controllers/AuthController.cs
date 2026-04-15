@@ -109,16 +109,59 @@ namespace Foodics.Controllers
             if (!result.Succeeded)
                 return Unauthorized("Invalid Phone Number or Password");
 
-            var token = await _jwtService.GenerateToken(user);
+            // 🔥 Generate Access Token
+            var accessToken = await _jwtService.GenerateAccessToken(user);
+
+            // 🔥 Generate Refresh Token
+            var refreshToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(5); // ✅ 5 days
+
+            await _userManager.UpdateAsync(user);
 
             return Ok(new
             {
-                token = token,
-                phoneNumber = user.PhoneNumber,
-                name = user.FullName
+                accessToken = accessToken,
+                refreshToken = refreshToken,
+
+                user = new
+                {
+                    id = user.Id,
+                    phoneNumber = user.PhoneNumber,
+                    name = user.FullName
+                }
             });
         }
 
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken(TokenRequestDto dto)
+        {
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.RefreshToken == dto.RefreshToken);
+
+            if (user == null)
+                return Unauthorized("Invalid refresh token");
+
+            if (user.RefreshTokenExpiryTime < DateTime.UtcNow)
+                return Unauthorized("Refresh token expired");
+
+
+            var newAccessToken = await _jwtService.GenerateAccessToken(user);
+
+            var newRefreshToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
+
+            user.RefreshToken = newRefreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(5);
+
+            await _userManager.UpdateAsync(user);
+
+            return Ok(new
+            {
+                accessToken = newAccessToken,
+                refreshToken = newRefreshToken
+            });
+        }
 
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword(ForgotPasswordDto model)

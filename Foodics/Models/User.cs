@@ -16,5 +16,10 @@ namespace Foodics.Models
         public override string PhoneNumber { get; set; } = null!;
 
         public string CustomerCode { get; set; } = Guid.NewGuid().ToString();
+
+
+
+        public string RefreshToken { get; set; }
+        public DateTime RefreshTokenExpiryTime { get; set; }
     }
 }

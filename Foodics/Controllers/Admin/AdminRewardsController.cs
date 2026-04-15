@@ -272,5 +272,49 @@ namespace Foodics.Controllers.Admin
                 qrCodeBase64 = $"data:image/png;base64,{qrBase64}"
             });
         }
+
+
+        // GET: api/admin/redeemed-rewards
+        [HttpGet("redeemed-rewards")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllRedeemedRewards()
+        {
+            var redeemedRewards = await _context.RedeemedRewards
+                .Include(r => r.User)
+                .Include(r => r.Reward)
+                .OrderByDescending(r => r.Id)
+                .Select(r => new
+                {
+                    id = r.Id,
+
+                    user = new
+                    {
+                        id = r.UserId,
+                        name = r.User.FullName,
+                        phone = r.User.PhoneNumber,
+                        email = r.User.Email
+                    },
+
+                    reward = new
+                    {
+                        id = r.RewardId,
+                        name = r.Reward.Name,
+                        pointsRequired = r.Reward.PointsRequired
+                    },
+
+                    pointsUsed = r.PointsUsed,
+
+                    status = new
+                    {
+                        isUsed = r.IsUsed,
+                        usedAt = r.UsedAt
+                    },
+
+                    createdAt = r.CreatedAt // لو مش عندك ضيفه 👇
+                })
+                .ToListAsync();
+
+            return Ok(redeemedRewards);
+        }
     }
 }
