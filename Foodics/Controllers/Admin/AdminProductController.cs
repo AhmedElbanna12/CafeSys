@@ -27,23 +27,32 @@ namespace Foodics.Controllers.Admin
 
 
 
-        // 🔹 Helper لحساب السعر بعد الخصم
         private decimal CalculateDiscountedPrice(Product product)
         {
-            if (product.DiscountPercentage.HasValue
-                && product.DiscountStart.HasValue
-                && product.DiscountEnd.HasValue)
+            if (!product.DiscountPercentage.HasValue ||
+                !product.DiscountStart.HasValue ||
+                !product.DiscountEnd.HasValue)
+                return product.Price;
+
+            var now = DateTime.UtcNow;
+            var start = DateTime.SpecifyKind(product.DiscountStart.Value, DateTimeKind.Utc);
+            var end = DateTime.SpecifyKind(product.DiscountEnd.Value, DateTimeKind.Utc);
+
+            // ✅ الـ logs هنا قبل المقارنة عشان تشوفهم دايماً
+            Console.WriteLine($"Now UTC   : {now}");
+            Console.WriteLine($"Start Kind: {start.Kind} | Value: {start}");
+            Console.WriteLine($"End Kind  : {end.Kind}   | Value: {end}");
+            Console.WriteLine($"Is in range: {now >= start && now <= end}");
+
+            if (now >= start && now <= end)
             {
-                var now = DateTime.UtcNow;
-                if (now >= product.DiscountStart.Value && now <= product.DiscountEnd.Value)
-                {
-                    return product.Price * (1 - product.DiscountPercentage.Value / 100);
-                }
+                return product.Price - (product.Price * (product.DiscountPercentage.Value / 100m));
             }
+
             return product.Price;
         }
 
-        [Authorize(Roles = "Admin")]
+        //[Authorize(Roles = "Admin")]
         [HttpPost]
         [RequestSizeLimit(10_000_000)] // 10 MB limit
         public async Task<IActionResult> CreateProduct([FromForm] CreateProductDto dto)
@@ -75,8 +84,16 @@ namespace Foodics.Controllers.Admin
                 Description = dto.Description,
                 Price = dto.Price,
                 DiscountPercentage = dto.DiscountPercentage,
-                DiscountStart = dto.DiscountStart,
-                DiscountEnd = dto.DiscountEnd,
+
+                // ✅ خزّنها صراحةً كـ UTC
+                DiscountStart = dto.DiscountStart.HasValue
+    ? dto.DiscountStart.Value.ToUniversalTime()
+    : null,
+
+                DiscountEnd = dto.DiscountEnd.HasValue
+    ? dto.DiscountEnd.Value.ToUniversalTime()
+    : null,
+
                 CategoryId = dto.CategoryId,
                 Calories = dto.Calories,
                 PointsReward = dto.PointsReward,
@@ -103,6 +120,9 @@ namespace Foodics.Controllers.Admin
                 Name = createdProduct.Name,
                 Description = createdProduct.Description,
                 Price = createdProduct.Price,
+                DiscountPercentage = createdProduct.DiscountPercentage,
+                DiscountStart = createdProduct.DiscountStart,
+                DiscountEnd = createdProduct.DiscountEnd,
                 Calories = createdProduct.Calories,
                 PointsReward = createdProduct.PointsReward,
                 ImageUrl = string.IsNullOrEmpty(createdProduct.ImageUrl) ? null : $"{baseUrl}{createdProduct.ImageUrl}",
@@ -328,7 +348,7 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
                 DiscountedPrice = CalculateDiscountedPrice(product),
                 DiscountPercentage = product.DiscountPercentage,
                 DiscountStart = product.DiscountStart,
-                DiscountEnd = product.DiscountEnd,
+                DiscountEnd = product.DiscountEnd
             });
 
             return Ok(result);

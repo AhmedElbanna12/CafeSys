@@ -207,27 +207,19 @@ namespace Foodics.Controllers
                 })
             });
         }
-
         [HttpPost("checkout")]
         public async Task<IActionResult> Checkout(CheckoutDto dto)
         {
             var userId = GetUserId();
 
-            var cart = await _context.Carts
-                .Include(c => c.Items)
-                    .ThenInclude(i => i.Modifiers)
-                .Include(c => c.Items)
-                    .ThenInclude(i => i.Product)
-                .FirstOrDefaultAsync(c => c.UserId == userId);
-
-            if (cart == null || !cart.Items.Any())
-                return BadRequest("Cart is empty");
-
             bool isRewardOrder = dto.RedeemedRewardId.HasValue;
 
+            Cart? cart = null;
             RedeemedReward? redeemedReward = null;
 
-            // 🔥 لو Reward Order
+            // =========================
+            // 🎁 REWARD ORDER LOGIC
+            // =========================
             if (isRewardOrder)
             {
                 redeemedReward = await _context.RedeemedRewards
@@ -239,11 +231,28 @@ namespace Foodics.Controllers
                 if (redeemedReward.IsUsed)
                     return BadRequest("Reward already used");
             }
+            else
+            {
+                // =========================
+                // 🛒 NORMAL CART ORDER
+                // =========================
+                cart = await _context.Carts
+                    .Include(c => c.Items)
+                        .ThenInclude(i => i.Modifiers)
+                    .Include(c => c.Items)
+                        .ThenInclude(i => i.Product)
+                    .FirstOrDefaultAsync(c => c.UserId == userId);
 
-            // 🔹 حساب SubTotal
+                if (cart == null || !cart.Items.Any())
+                    return BadRequest("Cart is empty");
+            }
+
+            // =========================
+            // 💰 SUBTOTAL
+            // =========================
             decimal subTotal = 0;
 
-            if (!isRewardOrder)
+            if (!isRewardOrder && cart != null)
             {
                 foreach (var item in cart.Items)
                 {
@@ -253,7 +262,9 @@ namespace Foodics.Controllers
                 }
             }
 
-            // 🔹 Promo
+            // =========================
+            // 🎟 PROMO CODE
+            // =========================
             decimal discountAmount = 0;
 
             if (!string.IsNullOrEmpty(dto.PromoCode) && !isRewardOrder)
@@ -265,7 +276,9 @@ namespace Foodics.Controllers
                     discountAmount = subTotal * (promo.DiscountAmount / 100m);
             }
 
-            // 🔹 Delivery Fee
+            // =========================
+            // 🚚 DELIVERY FEE
+            // =========================
             decimal deliveryFee = 0;
 
             if (dto.OrderType == OrderType.Delivery)
@@ -274,11 +287,14 @@ namespace Foodics.Controllers
                 deliveryFee = settings?.DeliveryFee ?? 50;
             }
 
-            // 🔥 Total Calculation
+            // =========================
+            // 🔥 TOTAL CALCULATION
+            // =========================
             decimal totalAmount;
 
             if (isRewardOrder)
             {
+                // Reward = free order OR delivery only
                 totalAmount = dto.OrderType == OrderType.Delivery ? deliveryFee : 0;
             }
             else
@@ -286,9 +302,14 @@ namespace Foodics.Controllers
                 totalAmount = subTotal - discountAmount + deliveryFee;
             }
 
-            // 🔹 Points
+            // =========================
+            // ⭐ POINTS
+            // =========================
             int pointsEarned = isRewardOrder ? 0 : (int)(totalAmount / 10);
 
+            // =========================
+            // 📦 CREATE ORDER
+            // =========================
             var order = new Order
             {
                 UserId = userId,
@@ -307,12 +328,14 @@ namespace Foodics.Controllers
                 OrderItems = new List<OrderItem>()
             };
 
-            // 🔹 Items (skip لو reward order)
-            if (!isRewardOrder)
+            // =========================
+            // 🛒 ORDER ITEMS (ONLY NORMAL)
+            // =========================
+            if (!isRewardOrder && cart != null)
             {
                 foreach (var cartItem in cart.Items)
                 {
-                    var orderItem = new OrderItem
+                    order.OrderItems.Add(new OrderItem
                     {
                         ProductId = cartItem.ProductId,
                         ProductName = cartItem.Product.Name,
@@ -325,29 +348,37 @@ namespace Foodics.Controllers
                             ModifierOptionId = m.ModifierOptionId,
                             Price = m.Price
                         }).ToList()
-                    };
-
-                    order.OrderItems.Add(orderItem);
+                    });
                 }
             }
 
+            // =========================
+            // 💾 SAVE ORDER
+            // =========================
             _context.Orders.Add(order);
 
-            // 🔥 Mark reward as used
+            // =========================
+            // 🎁 MARK REWARD AS USED
+            // =========================
             if (redeemedReward != null)
             {
                 redeemedReward.IsUsed = true;
                 redeemedReward.UsedAt = DateTime.UtcNow;
             }
 
-            // 🗑 Clear cart (only normal orders)
-            if (!isRewardOrder)
+            // =========================
+            // 🗑 CLEAR CART
+            // =========================
+            if (!isRewardOrder && cart != null)
             {
                 _context.Carts.Remove(cart);
             }
 
             await _context.SaveChangesAsync();
 
+            // =========================
+            // 📤 RESPONSE
+            // =========================
             return Ok(new
             {
                 order.Id,
@@ -367,8 +398,6 @@ namespace Foodics.Controllers
                 })
             });
         }
-
-
         private CartDto MapCartToDto(Cart cart)
         {
             return new CartDto
