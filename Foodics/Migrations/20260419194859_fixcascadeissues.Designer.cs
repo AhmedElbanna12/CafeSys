@@ -12,8 +12,8 @@ using POSSystem.Data;
 namespace Foodics.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260409100855_AddPromoCode")]
-    partial class AddPromoCode
+    [Migration("20260419194859_fixcascadeissues")]
+    partial class fixcascadeissues
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -56,6 +56,22 @@ namespace Foodics.Migrations
                     b.ToTable("Advertisements");
                 });
 
+            modelBuilder.Entity("Foodics.Models.AppSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("DeliveryFee")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AppSettings");
+                });
+
             modelBuilder.Entity("Foodics.Models.Branch", b =>
                 {
                     b.Property<int>("Id")
@@ -96,15 +112,18 @@ namespace Foodics.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Discount")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("PromoCode")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal>("SubTotal")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("UserId")
@@ -333,10 +352,20 @@ namespace Foodics.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<decimal>("DeliveryFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<decimal>("DiscountAmount")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<bool>("IsRewardOrder")
+                        .HasColumnType("bit");
+
                     b.Property<int>("OrderStatus")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OrderType")
                         .HasColumnType("int");
 
                     b.Property<int?>("POSDeviceId")
@@ -403,6 +432,9 @@ namespace Foodics.Migrations
                     b.Property<int>("ProductId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ProductId1")
+                        .HasColumnType("int");
+
                     b.Property<string>("ProductName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -426,6 +458,8 @@ namespace Foodics.Migrations
                     b.HasIndex("OrderId");
 
                     b.HasIndex("ProductId");
+
+                    b.HasIndex("ProductId1");
 
                     b.HasIndex("ProductSizeId");
 
@@ -879,6 +913,13 @@ namespace Foodics.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("RefreshToken")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("RefreshTokenExpiryTime")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
@@ -1070,12 +1111,13 @@ namespace Foodics.Migrations
                     b.HasOne("Foodics.Models.Product", "Product")
                         .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("Foodics.Models.ProductSize", "ProductSize")
                         .WithMany()
-                        .HasForeignKey("ProductSizeId");
+                        .HasForeignKey("ProductSizeId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Product");
 
@@ -1151,14 +1193,19 @@ namespace Foodics.Migrations
                         .IsRequired();
 
                     b.HasOne("Foodics.Models.Product", "Product")
-                        .WithMany("OrderItems")
+                        .WithMany()
                         .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
+
+                    b.HasOne("Foodics.Models.Product", null)
+                        .WithMany("OrderItems")
+                        .HasForeignKey("ProductId1");
 
                     b.HasOne("Foodics.Models.ProductSize", "ProductSize")
                         .WithMany()
-                        .HasForeignKey("ProductSizeId");
+                        .HasForeignKey("ProductSizeId")
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Order");
 

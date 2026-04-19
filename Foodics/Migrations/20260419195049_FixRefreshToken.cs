@@ -5,14 +5,14 @@
 namespace Foodics.Migrations
 {
     /// <inheritdoc />
-    public partial class EditNotificationtTable : Migration
+    public partial class FixRefreshToken : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterColumn<string>(
-                name: "UserId",
-                table: "Notifications",
+                name: "RefreshToken",
+                table: "AspNetUsers",
                 type: "nvarchar(max)",
                 nullable: true,
                 oldClrType: typeof(string),
@@ -23,8 +23,8 @@ namespace Foodics.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AlterColumn<string>(
-                name: "UserId",
-                table: "Notifications",
+                name: "RefreshToken",
+                table: "AspNetUsers",
                 type: "nvarchar(max)",
                 nullable: false,
                 defaultValue: "",

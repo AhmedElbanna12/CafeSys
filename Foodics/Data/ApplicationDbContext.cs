@@ -54,136 +54,124 @@ namespace POSSystem.Data
             base.OnModelCreating(builder);
 
 
-            builder.Entity<CartItemModifier>()
-    .HasOne(c => c.ModifierOption)
-    .WithMany()
-    .HasForeignKey(c => c.ModifierOptionId)
-    .OnDelete(DeleteBehavior.Restrict); // NO ACTION
+            // =========================
+            // 🔴 CART RELATIONS
+            // =========================
 
             builder.Entity<CartItem>()
-    .HasOne(c => c.ProductSize)
-    .WithMany()
-    .HasForeignKey(c => c.ProductSizeId)
-    .OnDelete(DeleteBehavior.SetNull);
+      .HasOne(ci => ci.Product)
+      .WithMany()
+      .HasForeignKey(ci => ci.ProductId)
+      .OnDelete(DeleteBehavior.NoAction); // ✅ بدل Restrict أو Cascade
+
+            builder.Entity<CartItem>()
+                .HasOne(ci => ci.ProductSize)
+                .WithMany()
+                .HasForeignKey(ci => ci.ProductSizeId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             builder.Entity<CartItemModifier>()
-    .HasOne(c => c.CartItem)
-    .WithMany(c => c.Modifiers)
-    .HasForeignKey(c => c.CartItemId)
-    .OnDelete(DeleteBehavior.Cascade); // مسموح cascade
+                .HasOne(c => c.ModifierOption)
+                .WithMany()
+                .HasForeignKey(c => c.ModifierOptionId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<CartItemModifier>()
+                .HasOne(c => c.CartItem)
+                .WithMany(c => c.Modifiers)
+                .HasForeignKey(c => c.CartItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // =========================
+            // 🔴 ORDER RELATIONS
+            // =========================
 
             builder.Entity<OrderItem>()
-                .Property(o => o.DiscountAmount)
-                .HasPrecision(18, 2);
+                .HasOne(oi => oi.Product)
+                .WithMany(p => p.OrderItems)
+                .HasForeignKey(oi => oi.ProductId)
+                .OnDelete(DeleteBehavior.NoAction);
 
             builder.Entity<OrderItem>()
-    .HasOne(o => o.ProductSize)
-    .WithMany()
-    .HasForeignKey(o => o.ProductSizeId)
-    .OnDelete(DeleteBehavior.SetNull);
+                .HasOne(oi => oi.ProductSize)
+                .WithMany()
+                .HasForeignKey(oi => oi.ProductSizeId)
+                .OnDelete(DeleteBehavior.SetNull);
 
-            builder.Entity<Product>()
-                .Property(p => p.DiscountPercentage)
-                .HasPrecision(5, 2); // مثلا 99.99%
-
-            // تأكد من uniqueness على PhoneNumber
-            builder.Entity<User>()
-                .HasIndex(u => u.PhoneNumber)
-                .IsUnique();
-
-            // Precision Configurations
-            builder.Entity<Ingredient>()
-                .Property(i => i.MinQuantity)
-                .HasPrecision(18, 2);
-
-            builder.Entity<Ingredient>()
-                .Property(i => i.Quantity)
-                .HasPrecision(18, 2);
-
-            builder.Entity<Product>()
-                .Property(p => p.Price)
-                .HasPrecision(18, 2);
-
-            builder.Entity<ProductSize>()
-                .Property(ps => ps.Price)
-                .HasPrecision(18, 2);
-
-            builder.Entity<ModifierOption>()
-                .Property(mo => mo.ExtraPrice)
-                .HasPrecision(18, 2);
-
-            builder.Entity<ProductIngredient>()
-                .Property(pi => pi.Quantity)
-                .HasPrecision(18, 2);
+            builder.Entity<OrderItem>()
+                .HasMany(oi => oi.Modifiers)
+                .WithOne(m => m.OrderItem)
+                .HasForeignKey(m => m.OrderItemId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             builder.Entity<Order>()
-                .Property(o => o.TotalAmount)
-                .HasPrecision(18, 2);
+                .HasOne(o => o.Payment)
+                .WithOne(p => p.Order)
+                .HasForeignKey<Payment>(p => p.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            builder.Entity<OrderItem>()
-                .Property(oi => oi.UnitPrice)
-                .HasPrecision(18, 2);
+            // =========================
+            // 🔴 PRODUCT RELATIONS
+            // =========================
 
-            builder.Entity<OrderItem>()
-                .Property(oi => oi.TotalPrice)
-                .HasPrecision(18, 2);
-
-            builder.Entity<Payment>()
-                .Property(p => p.Amount)
-                .HasPrecision(18, 2);
-
-            builder.Entity<StockMovement>()
-                .Property(sm => sm.Quantity)
-                .HasPrecision(18, 2);
-
-            // Product → Sizes
             builder.Entity<Product>()
                 .HasMany(p => p.Sizes)
-                .WithOne(ps => ps.Product)
-                .HasForeignKey(ps => ps.ProductId)
+                .WithOne(s => s.Product)
+                .HasForeignKey(s => s.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Product → ModifierGroups
             builder.Entity<Product>()
                 .HasMany(p => p.ModifierGroups)
-                .WithOne(mg => mg.Product)
-                .HasForeignKey(mg => mg.ProductId)
+                .WithOne(m => m.Product)
+                .HasForeignKey(m => m.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ModifierGroup → ModifierOptions
             builder.Entity<ModifierGroup>()
                 .HasMany(mg => mg.Options)
                 .WithOne(o => o.ModifierGroup)
                 .HasForeignKey(o => o.ModifierGroupId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // OrderItem → Modifiers
-            builder.Entity<OrderItem>()
-     .HasMany(oi => oi.Modifiers)
-     .WithOne(oim => oim.OrderItem)
-     .HasForeignKey(oim => oim.OrderItemId)
-     .OnDelete(DeleteBehavior.Restrict);
+            // =========================
+            // 🔴 PRECISION FIXES
+            // =========================
 
-            //// Orders → POSDevice
-            //builder.Entity<Order>()
-            //    .HasOne(o => o.POSDevice)
-            //    .WithMany(p => p.Orders)
-            //    .HasForeignKey(o => o.POSDeviceId)
-            //    .OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<Product>().Property(x => x.Price).HasPrecision(18, 2);
+            builder.Entity<ProductSize>().Property(x => x.Price).HasPrecision(18, 2);
 
-            //// Orders → Branch
-            //builder.Entity<Order>()
-            //    .HasOne(o => o.Branch)
-            //    .WithMany(b => b.Orders)
-            //    .HasForeignKey(o => o.BranchId)
-            //    .OnDelete(DeleteBehavior.Restrict);
+            builder.Entity<Order>().Property(x => x.SubTotal).HasPrecision(18, 2);
+            builder.Entity<Order>().Property(x => x.TotalAmount).HasPrecision(18, 2);
+            builder.Entity<Order>().Property(x => x.DiscountAmount).HasPrecision(18, 2);
+            builder.Entity<Order>().Property(x => x.DeliveryFee).HasPrecision(18, 2);
 
-            // Orders → Payment (One to One)
-            builder.Entity<Order>()
-                .HasOne(o => o.Payment)
-                .WithOne(p => p.Order)
-                .HasForeignKey<Payment>(p => p.OrderId)
-                .OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<Cart>().Property(x => x.Total).HasPrecision(18, 2);
+            builder.Entity<Cart>().Property(x => x.SubTotal).HasPrecision(18, 2);
+            builder.Entity<Cart>().Property(x => x.Discount).HasPrecision(18, 2);
+
+            builder.Entity<CartItem>().Property(x => x.Price).HasPrecision(18, 2);
+            builder.Entity<CartItemModifier>().Property(x => x.Price).HasPrecision(18, 2);
+
+            builder.Entity<OrderItem>().Property(x => x.UnitPrice).HasPrecision(18, 2);
+            builder.Entity<OrderItem>().Property(x => x.TotalPrice).HasPrecision(18, 2);
+            builder.Entity<OrderItem>().Property(x => x.DiscountAmount).HasPrecision(18, 2);
+
+            builder.Entity<OrderItemModifier>().Property(x => x.Price).HasPrecision(18, 2);
+
+            builder.Entity<ModifierOption>().Property(x => x.ExtraPrice).HasPrecision(18, 2);
+
+            builder.Entity<ProductIngredient>().Property(x => x.Quantity).HasPrecision(18, 2);
+            builder.Entity<Ingredient>().Property(x => x.Quantity).HasPrecision(18, 2);
+            builder.Entity<Ingredient>().Property(x => x.MinQuantity).HasPrecision(18, 2);
+
+            builder.Entity<StockMovement>().Property(x => x.Quantity).HasPrecision(18, 2);
+
+            // =========================
+            // 🔴 INDEX / RULES
+            // =========================
+
+            builder.Entity<User>()
+                .HasIndex(u => u.PhoneNumber)
+                .IsUnique();
         }
     }
 }
