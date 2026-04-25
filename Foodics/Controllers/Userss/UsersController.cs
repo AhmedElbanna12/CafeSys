@@ -33,7 +33,8 @@ namespace Foodics.Controllers.User
                 user.Id,
                 user.UserName,
                 user.Email,
-                user.PhoneNumber
+                user.PhoneNumber , 
+                user.CustomerCode
             };
 
             return Ok(result);

@@ -1,11 +1,13 @@
 ﻿using Foodics.Dtos.Admin.notification;
 using Foodics.Hub;
 using Foodics.Models;
+using Foodics.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using POSSystem.Data;
+using System.Security.Claims;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -13,21 +15,67 @@ public class NotificationsController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly IHubContext<NotificationHub> _hub;
+    private readonly FcmService _fcmService;
 
-    public NotificationsController(ApplicationDbContext context, IHubContext<NotificationHub> hub)
+    public NotificationsController(
+        ApplicationDbContext context,
+        IHubContext<NotificationHub> hub,
+        FcmService fcmService)
     {
         _context = context;
         _hub = hub;
+        _fcmService = fcmService;
     }
 
     // =====================
     // ارسال لكل المستخدمين
     // =====================
+    //[Authorize(Roles = "Admin")]
+    //[HttpPost("send-to-all")]
+    //public async Task<IActionResult> SendToAll([FromBody] NotificationDto dto)
+    //{
+    //    var users = await _context.Users.ToListAsync();
+
+    //    foreach (var user in users)
+    //    {
+    //        _context.Notifications.Add(new Notification
+    //        {
+    //            UserId = user.Id,
+    //            Title = dto.Title,
+    //            Body = dto.Body
+    //        });
+    //    }
+
+    //    await _context.SaveChangesAsync();
+
+    //    // SignalR
+    //    await _hub.Clients.All.SendAsync("ReceiveNotification", dto.Title, dto.Body);
+
+    //    // FCM
+    //    var tokens = await _context.UserDevices
+    //        .Select(x => x.DeviceToken)
+    //        .ToListAsync();
+
+    //    foreach (var token in tokens)
+    //    {
+    //        await _fcmService.SendAsync(token, dto.Title, dto.Body,
+    //            new Dictionary<string, string>
+    //            {
+    //                { "type", "general" }
+    //            });
+    //    }
+
+    //    return Ok("Notification sent to all users");
+    //}
+
+
     [Authorize(Roles = "Admin")]
     [HttpPost("send-to-all")]
     public async Task<IActionResult> SendToAll([FromBody] NotificationDto dto)
     {
+        // 1. خزن في DB (اختياري لكن مهم)
         var users = await _context.Users.ToListAsync();
+
         foreach (var user in users)
         {
             _context.Notifications.Add(new Notification
@@ -37,8 +85,27 @@ public class NotificationsController : ControllerBase
                 Body = dto.Body
             });
         }
+
         await _context.SaveChangesAsync();
-        await _hub.Clients.All.SendAsync("ReceiveNotification", dto.Title, dto.Body);
+
+        // 2. هات كل التوكنز
+        var tokens = await _context.UserDevices
+            .Select(x => x.DeviceToken)
+            .ToListAsync();
+
+        // 3. ابعت لكل الأجهزة
+        foreach (var token in tokens)
+        {
+            await _fcmService.SendAsync(
+                token,
+                dto.Title,
+                dto.Body,
+                new Dictionary<string, string>
+                {
+                { "type", "admin_message" }
+                });
+        }
+
         return Ok("Notification sent to all users");
     }
 
@@ -49,19 +116,41 @@ public class NotificationsController : ControllerBase
     [HttpPost("send-to-user")]
     public async Task<IActionResult> SendToUser([FromBody] SendToUserDto dto)
     {
+        // حفظ في DB
         _context.Notifications.Add(new Notification
         {
             UserId = dto.UserId,
             Title = dto.Title,
             Body = dto.Body
         });
+
         await _context.SaveChangesAsync();
-        await _hub.Clients.User(dto.UserId).SendAsync("ReceiveNotification", dto.Title, dto.Body);
+
+        // SignalR (لو فاتح)
+        await _hub.Clients.User(dto.UserId)
+            .SendAsync("ReceiveNotification", dto.Title, dto.Body);
+
+        // FCM (الأساس)
+        var tokens = await _context.UserDevices
+            .Where(x => x.UserId == dto.UserId)
+            .Select(x => x.DeviceToken)
+            .ToListAsync();
+
+        foreach (var token in tokens)
+        {
+            await _fcmService.SendAsync(token, dto.Title, dto.Body,
+                new Dictionary<string, string>
+                {
+                    { "type", "user" },
+                    { "userId", dto.UserId }
+                });
+        }
+
         return Ok("Notification sent to user");
     }
 
     // =====================
-    // جلب Notifications لمستخدم
+    // جلب Notifications
     // =====================
     [Authorize]
     [HttpGet("user/{userId}")]
@@ -75,7 +164,7 @@ public class NotificationsController : ControllerBase
                 n.Id,
                 n.Title,
                 n.Body,
-                n.IsRead,       // ✅ مهم للـ Flutter
+                n.IsRead,
                 n.CreatedAt
             })
             .ToListAsync();
@@ -84,7 +173,7 @@ public class NotificationsController : ControllerBase
     }
 
     // =====================
-    // ✅ عدد الغير مقروءة (للـ Badge)
+    // عدد الغير مقروءة
     // =====================
     [Authorize]
     [HttpGet("unread-count/{userId}")]
@@ -97,7 +186,7 @@ public class NotificationsController : ControllerBase
     }
 
     // =====================
-    // ✅ تحديد كـ مقروءة
+    // تحديد كمقروءة
     // =====================
     [Authorize]
     [HttpPut("mark-as-read/{id}")]
@@ -108,11 +197,12 @@ public class NotificationsController : ControllerBase
 
         notification.IsRead = true;
         await _context.SaveChangesAsync();
+
         return Ok("Marked as read");
     }
 
     // =====================
-    // ✅ تحديد الكل كـ مقروءة
+    // تحديد الكل كمقروءة
     // =====================
     [Authorize]
     [HttpPut("mark-all-as-read/{userId}")]
@@ -123,12 +213,14 @@ public class NotificationsController : ControllerBase
             .ToListAsync();
 
         notifications.ForEach(n => n.IsRead = true);
+
         await _context.SaveChangesAsync();
+
         return Ok("All marked as read");
     }
 
     // =====================
-    // ✅ حذف Notification
+    // حذف Notification
     // =====================
     [Authorize]
     [HttpDelete("{id}")]
@@ -139,6 +231,52 @@ public class NotificationsController : ControllerBase
 
         _context.Notifications.Remove(notification);
         await _context.SaveChangesAsync();
+
         return Ok("Deleted");
+    }
+
+    // =====================
+    // تسجيل Device Token
+    // =====================
+    [Authorize]
+    [HttpPost("register-device")]
+    public async Task<IActionResult> RegisterDevice([FromBody] RegisterDeviceDto dto)
+    {
+        var userId = User.FindFirst("userId")?.Value;
+        var exists = await _context.UserDevices
+            .AnyAsync(x => x.DeviceToken == dto.Token);
+
+        if (!exists)
+        {
+            _context.UserDevices.Add(new UserDevice
+            {
+                UserId = userId,
+                DeviceToken = dto.Token
+            });
+
+            await _context.SaveChangesAsync();
+        }
+
+        return Ok();
+    }
+
+    [HttpPost("test-notification")]
+    public async Task<IActionResult> TestNotification([FromBody] string userId)
+    {
+        var tokens = await _context.UserDevices
+            .Where(x => x.UserId == userId)
+            .Select(x => x.DeviceToken)
+            .ToListAsync();
+
+        foreach (var token in tokens)
+        {
+            await _fcmService.SendAsync(
+                token,
+                " Test Notification",
+                "لو وصلتك الرسالة يبقى كله شغال"
+            );
+        }
+
+        return Ok("Sent");
     }
 }

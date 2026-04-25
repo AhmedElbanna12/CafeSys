@@ -52,7 +52,7 @@ namespace Foodics.Controllers.Admin
             return product.Price;
         }
 
-        //[Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         [RequestSizeLimit(10_000_000)] // 10 MB limit
         public async Task<IActionResult> CreateProduct([FromForm] CreateProductDto dto)

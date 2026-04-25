@@ -10,6 +10,8 @@ bin/
 obj/
 out/
 
+firebase-key.json
+
 # .NET Core / SDK files
 project.lock.json
 project.fragment.lock.json

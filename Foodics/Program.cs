@@ -139,6 +139,13 @@ namespace Foodics
 
 
             builder.Services.AddScoped<IEmailService, EmailService>();
+            builder.Services.AddScoped<FcmService>();
+
+
+            FirebaseApp.Create(new AppOptions()
+            {
+                Credential = GoogleCredential.FromFile("firebase-key.json")
+            });
 
             var app = builder.Build();
 
