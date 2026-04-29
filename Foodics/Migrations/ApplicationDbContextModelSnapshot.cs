@@ -50,7 +50,7 @@ namespace Foodics.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Advertisements");
+                    b.ToTable("Advertisements", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.AppSettings", b =>
@@ -70,7 +70,7 @@ namespace Foodics.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AppSettings");
+                    b.ToTable("AppSettings", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.Branch", b =>
@@ -101,7 +101,7 @@ namespace Foodics.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Branches");
+                    b.ToTable("Branches", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.Cart", b =>
@@ -133,7 +133,7 @@ namespace Foodics.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Carts");
+                    b.ToTable("Carts", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.CartItem", b =>
@@ -168,7 +168,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("ProductSizeId");
 
-                    b.ToTable("CartItems");
+                    b.ToTable("CartItems", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.CartItemModifier", b =>
@@ -195,7 +195,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("ModifierOptionId");
 
-                    b.ToTable("CartItemModifiers");
+                    b.ToTable("CartItemModifiers", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.Category", b =>
@@ -219,7 +219,7 @@ namespace Foodics.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Categories");
+                    b.ToTable("Categories", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.Ingredient", b =>
@@ -251,7 +251,7 @@ namespace Foodics.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Ingredients");
+                    b.ToTable("Ingredients", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.ModifierGroup", b =>
@@ -279,7 +279,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ModifierGroups");
+                    b.ToTable("ModifierGroups", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.ModifierOption", b =>
@@ -305,7 +305,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("ModifierGroupId");
 
-                    b.ToTable("ModifierOptions");
+                    b.ToTable("ModifierOptions", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.Notification", b =>
@@ -335,7 +335,7 @@ namespace Foodics.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Notifications");
+                    b.ToTable("Notifications", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.Order", b =>
@@ -416,7 +416,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("Orders");
+                    b.ToTable("Orders", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.OrderItem", b =>
@@ -463,7 +463,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("ProductSizeId");
 
-                    b.ToTable("OrderItems");
+                    b.ToTable("OrderItems", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.OrderItemModifier", b =>
@@ -490,7 +490,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("OrderItemId");
 
-                    b.ToTable("OrderItemModifiers");
+                    b.ToTable("OrderItemModifiers", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.OtpCode", b =>
@@ -517,7 +517,7 @@ namespace Foodics.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("OtpCode");
+                    b.ToTable("OtpCode", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.POSDevice", b =>
@@ -549,7 +549,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("BranchId");
 
-                    b.ToTable("POSDevices");
+                    b.ToTable("POSDevices", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.Payment", b =>
@@ -583,7 +583,7 @@ namespace Foodics.Migrations
                     b.HasIndex("OrderId")
                         .IsUnique();
 
-                    b.ToTable("Payments");
+                    b.ToTable("Payments", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.PointsTransaction", b =>
@@ -620,7 +620,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("PointsTransactions");
+                    b.ToTable("PointsTransactions", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.Product", b =>
@@ -673,7 +673,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("CategoryId");
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.ProductIngredient", b =>
@@ -700,7 +700,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ProductIngredients");
+                    b.ToTable("ProductIngredients", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.ProductSize", b =>
@@ -729,7 +729,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ProductSizes");
+                    b.ToTable("ProductSizes", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.PromoCode", b =>
@@ -759,7 +759,7 @@ namespace Foodics.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PromoCodes");
+                    b.ToTable("PromoCodes", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.RedeemedReward", b =>
@@ -795,7 +795,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RedeemedRewards");
+                    b.ToTable("RedeemedRewards", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.Reward", b =>
@@ -823,7 +823,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("Rewards");
+                    b.ToTable("Rewards", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.StockMovement", b =>
@@ -855,7 +855,7 @@ namespace Foodics.Migrations
 
                     b.HasIndex("IngredientId");
 
-                    b.ToTable("StockMovements");
+                    b.ToTable("StockMovements", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.User", b =>
@@ -968,7 +968,7 @@ namespace Foodics.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("UserDevices");
+                    b.ToTable("UserDevices", (string)null);
                 });
 
             modelBuilder.Entity("Foodics.Models.UserPoints", b =>
@@ -991,7 +991,7 @@ namespace Foodics.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("UserPoints");
+                    b.ToTable("UserPoints", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>

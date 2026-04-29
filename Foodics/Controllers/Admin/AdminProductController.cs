@@ -33,11 +33,15 @@ namespace Foodics.Controllers.Admin
                 !product.DiscountEnd.HasValue)
                 return product.Price;
 
-            var now = DateTime.UtcNow;
+            // ✅ استخدم Local Time بدل UTC
+            var cairoZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time"); // Windows
+                                                                                        // var cairoZone = TimeZoneInfo.FindSystemTimeZoneById("Africa/Cairo"); // Linux/Docker
 
-            // ضمان إن التواريخ بتتعامل كـ UTC
-            var start = DateTime.SpecifyKind(product.DiscountStart.Value, DateTimeKind.Utc);
-            var end = DateTime.SpecifyKind(product.DiscountEnd.Value, DateTimeKind.Utc);
+            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cairoZone);
+
+            // ✅ التواريخ المخزنة هي لوكال، مش UTC
+            var start = product.DiscountStart.Value;
+            var end = product.DiscountEnd.Value;
 
             if (now >= start && now <= end)
                 return product.Price - (product.Price * (product.DiscountPercentage.Value / 100m));
@@ -71,20 +75,26 @@ namespace Foodics.Controllers.Admin
                 imageUrl = $"/images/products/{uniqueFileName}";
             }
 
-            // ✅ إنشاء المنتج
+
+            var cairoZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+
             var product = new Product
             {
                 Name = dto.Name,
                 Description = dto.Description,
                 Price = dto.Price,
                 DiscountPercentage = dto.DiscountPercentage,
+
+                // ✅ لو الـ DTO بييجي UTC، حوّله للوكال قبل التخزين
                 DiscountStart = dto.DiscountStart.HasValue
-    ? DateTime.SpecifyKind(dto.DiscountStart.Value, DateTimeKind.Utc)
-    : null,
+                    ? TimeZoneInfo.ConvertTimeFromUtc(
+                        DateTime.SpecifyKind(dto.DiscountStart.Value, DateTimeKind.Utc), cairoZone)
+                    : null,
 
                 DiscountEnd = dto.DiscountEnd.HasValue
-    ? DateTime.SpecifyKind(dto.DiscountEnd.Value, DateTimeKind.Utc)
-    : null,
+                    ? TimeZoneInfo.ConvertTimeFromUtc(
+                        DateTime.SpecifyKind(dto.DiscountEnd.Value, DateTimeKind.Utc), cairoZone)
+                    : null,
 
                 CategoryId = dto.CategoryId,
                 Calories = dto.Calories,
@@ -456,11 +466,15 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
             if (dto.DiscountPercentage.HasValue)
                 product.DiscountPercentage = dto.DiscountPercentage;
 
+            var cairoZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+
             if (dto.DiscountStart.HasValue)
-                product.DiscountStart = dto.DiscountStart;
+                product.DiscountStart = TimeZoneInfo.ConvertTimeFromUtc(
+                    DateTime.SpecifyKind(dto.DiscountStart.Value, DateTimeKind.Utc), cairoZone);
 
             if (dto.DiscountEnd.HasValue)
-                product.DiscountEnd = dto.DiscountEnd;
+                product.DiscountEnd = TimeZoneInfo.ConvertTimeFromUtc(
+                    DateTime.SpecifyKind(dto.DiscountEnd.Value, DateTimeKind.Utc), cairoZone);
 
             if (dto.Calories.HasValue)
                 product.Calories = dto.Calories.Value;

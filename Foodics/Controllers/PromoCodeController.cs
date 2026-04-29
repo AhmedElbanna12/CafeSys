@@ -18,7 +18,6 @@ namespace Foodics.Controllers
             _context = context;
         }
 
-        //[Authorize(Roles = "Admin")]
         [HttpPost("add")]
         public async Task<IActionResult> AddPromoCode(AddPromoCodeDto dto)
         {
@@ -33,20 +32,23 @@ namespace Foodics.Controllers
             if (exists)
                 return BadRequest("Promo code already exists.");
 
+            // ✅ جيب الـ TimeZone بتاعتك
+            var cairoZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+
             var promo = new PromoCode
             {
                 Code = normalizedCode,
                 DiscountAmount = dto.DiscountAmount,
-                StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc),
-                EndDate = DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc),
+                // ✅ حوّل من UTC للوكال قبل التخزين
+                StartDate = TimeZoneInfo.ConvertTimeFromUtc(
+                    DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc), cairoZone),
+                EndDate = TimeZoneInfo.ConvertTimeFromUtc(
+                    DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc), cairoZone),
                 IsActive = true
             };
+
             _context.PromoCodes.Add(promo);
             await _context.SaveChangesAsync();
-
-            // logging هنا صح
-            Console.WriteLine($"Local: {DateTime.Now}");
-            Console.WriteLine($"UTC: {DateTime.UtcNow}");
 
             return Ok(new
             {
@@ -58,7 +60,6 @@ namespace Foodics.Controllers
             });
         }
 
-        [AllowAnonymous]
         [HttpGet("validate/{code}")]
         public async Task<IActionResult> ValidatePromoCode(string code)
         {
@@ -67,7 +68,9 @@ namespace Foodics.Controllers
 
             var normalizedCode = code.Trim().ToLower();
 
-            var now = DateTime.UtcNow; // 🔥 مهم جدًا
+            // ✅ استخدم اللوكال تايم بدل UTC عشان يتطابق مع اللي في الداتابيز
+            var cairoZone = TimeZoneInfo.FindSystemTimeZoneById("Egypt Standard Time");
+            var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, cairoZone);
 
             var promo = await _context.PromoCodes
                 .FirstOrDefaultAsync(p =>

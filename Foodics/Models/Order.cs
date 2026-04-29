@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Foodics.Helpers;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -20,7 +22,7 @@ namespace Foodics.Models
         public int PointsEarned { get; set; }
         public int PointsRedeemed { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime CreatedAt { get; set; } = TimeHelper.NowCairo();
 
         public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 

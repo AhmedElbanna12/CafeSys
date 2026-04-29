@@ -87,7 +87,7 @@ namespace Foodics.Controllers.Admin
                             OrderId = order.Id,
                             Points = order.PointsEarned,
                             Type = "Earn",
-                            WeekStartDate = DateTime.UtcNow.Date.AddDays(-(int)DateTime.UtcNow.DayOfWeek)
+                          //  WeekStartDate = DateTime.UtcNow.Date.AddDays(-(int)DateTime.UtcNow.DayOfWeek)
                         };
 
                         _context.PointsTransactions.Add(transaction);

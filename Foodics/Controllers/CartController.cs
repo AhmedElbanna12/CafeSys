@@ -28,6 +28,13 @@ namespace Foodics.Controllers
             _userManager = userManager;
         }
 
+
+        private static readonly TimeZoneInfo CairoZone =
+    TimeZoneInfo.GetSystemTimeZones()
+        .FirstOrDefault(tz => tz.Id == "Africa/Cairo" || tz.Id == "Egypt Standard Time")
+    ?? TimeZoneInfo.Utc;
+
+        private DateTime NowLocal() => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, CairoZone);
         private decimal CalculateDiscountedPrice(Product product)
         {
             if (!product.DiscountPercentage.HasValue ||
@@ -35,9 +42,10 @@ namespace Foodics.Controllers
                 !product.DiscountEnd.HasValue)
                 return product.Price;
 
-            var now = DateTime.UtcNow;
-            var start = DateTime.SpecifyKind(product.DiscountStart.Value, DateTimeKind.Utc);
-            var end = DateTime.SpecifyKind(product.DiscountEnd.Value, DateTimeKind.Utc);
+            var now = NowLocal(); // ✅ بدل DateTime.UtcNow
+
+            var start = product.DiscountStart.Value;
+            var end = product.DiscountEnd.Value;
 
             if (now >= start && now <= end)
                 return product.Price - (product.Price * (product.DiscountPercentage.Value / 100m));
@@ -76,6 +84,9 @@ namespace Foodics.Controllers
             var productSize = await _context.ProductSizes
                 .FirstOrDefaultAsync(s => s.Id == dto.ProductSizeId);
 
+            if (productSize == null)
+                return BadRequest("Product size is required");
+
             var item = cart.Items.FirstOrDefault(x =>
                 x.ProductId == dto.ProductId &&
                 x.ProductSizeId == dto.ProductSizeId &&
@@ -83,15 +94,15 @@ namespace Foodics.Controllers
                     .SequenceEqual(dto.ModifierOptionIds.OrderBy(id => id))
             );
 
-            var basePrice = CalculateDiscountedPrice(product);
-            var sizePrice = productSize?.Price ?? 0;
+            // ✅ السعر بقى من الـ size فقط
+            var sizePrice = productSize.Price;
 
             if (item != null)
             {
                 item.Quantity += dto.Quantity;
 
-                // 🔥 إعادة تثبيت السعر (مهم جدًا)
-                item.Price = basePrice + sizePrice;
+                // 🔥 تثبيت السعر = size فقط
+                item.Price = sizePrice;
             }
             else
             {
@@ -100,7 +111,7 @@ namespace Foodics.Controllers
                     ProductId = dto.ProductId,
                     ProductSizeId = dto.ProductSizeId,
                     Quantity = dto.Quantity,
-                    Price = basePrice + sizePrice,
+                    Price = sizePrice, // 👈 التعديل هنا
                     Modifiers = new List<CartItemModifier>()
                 };
 
@@ -194,7 +205,7 @@ namespace Foodics.Controllers
             );
 
             // 🔹 جلب البروموكود
-            var now = DateTime.UtcNow;
+            var now = NowLocal(); // ✅ بدل DateTime.UtcNow
 
             var promo = await _context.PromoCodes
                 .FirstOrDefaultAsync(p =>
@@ -246,7 +257,6 @@ namespace Foodics.Controllers
                 })
             });
         }
-
         [HttpPost("checkout")]
         public async Task<IActionResult> Checkout(CheckoutDto dto)
         {
@@ -258,7 +268,7 @@ namespace Foodics.Controllers
             RedeemedReward? redeemedReward = null;
 
             // =========================
-            // 🎁 REWARD ORDER LOGIC
+            // 🎁 REWARD ORDER
             // =========================
             if (isRewardOrder)
             {
@@ -275,12 +285,13 @@ namespace Foodics.Controllers
             }
             else
             {
-                // 🛒 NORMAL CART
                 cart = await _context.Carts
                     .Include(c => c.Items)
                         .ThenInclude(i => i.Modifiers)
                     .Include(c => c.Items)
                         .ThenInclude(i => i.Product)
+                    .Include(c => c.Items)
+                        .ThenInclude(i => i.ProductSize) // ✅ مهم جدًا
                     .FirstOrDefaultAsync(c => c.UserId == userId);
 
                 if (cart == null || !cart.Items.Any())
@@ -288,60 +299,46 @@ namespace Foodics.Controllers
             }
 
             // =========================
-            // 💰 SUBTOTAL (FIXED)
+            // 💰 SUBTOTAL
             // =========================
             decimal subTotal = 0;
 
             if (!isRewardOrder && cart != null)
             {
-                foreach (var item in cart.Items)
-                {
-                    var sizePrice = item.ProductSizeId != null
-                        ? _context.ProductSizes
-                            .Where(s => s.Id == item.ProductSizeId)
-                            .Select(s => s.Price)
-                            .FirstOrDefault()
-                        : 0;
-
-                    decimal itemTotal =
-                        (item.Price + sizePrice + item.Modifiers.Sum(m => m.Price))
-                        * item.Quantity;
-
-                    subTotal += itemTotal;
-                }
+                subTotal = cart.Items.Sum(item =>
+                    (item.Price + item.Modifiers.Sum(m => m.Price)) * item.Quantity
+                );
             }
 
             // =========================
-            // 🎟 PROMO CODE
+            // 🎟 PROMO
             // =========================
             decimal discountAmount = 0;
 
             if (!string.IsNullOrEmpty(dto.PromoCode) && !isRewardOrder)
             {
-                var now = DateTime.UtcNow;
+                var now = NowLocal(); // ✅ بدل DateTime.UtcNow
 
-                var promo = await _context.PromoCodes
-                    .FirstOrDefaultAsync(p =>
-                        p.Code == dto.PromoCode &&
-                        p.IsActive &&
-                        p.StartDate <= now &&
-                        p.EndDate >= now);
+                var promo = await _context.PromoCodes.FirstOrDefaultAsync(p =>
+                    p.Code == dto.PromoCode &&
+                    p.IsActive &&
+                    p.StartDate <= now &&
+                    p.EndDate >= now);
 
                 if (promo != null)
                     discountAmount = subTotal * (promo.DiscountAmount / 100m);
             }
 
             // =========================
-            // 🚚 DELIVERY FEE
+            // 🚚 DELIVERY
             // =========================
             decimal deliveryFee = 0;
-
             var settings = await _context.AppSettings.FirstOrDefaultAsync();
 
             if (dto.OrderType == OrderType.Delivery)
             {
                 if (settings != null && !settings.IsDeliveryEnabled)
-                    return BadRequest("Delivery service is currently disabled");
+                    return BadRequest("Delivery disabled");
 
                 deliveryFee = settings?.DeliveryFee ?? 50;
             }
@@ -349,20 +346,10 @@ namespace Foodics.Controllers
             // =========================
             // 🔥 TOTAL
             // =========================
-            decimal totalAmount;
+            decimal totalAmount = isRewardOrder
+                ? (dto.OrderType == OrderType.Delivery ? deliveryFee : 0)
+                : (subTotal - discountAmount + deliveryFee);
 
-            if (isRewardOrder)
-            {
-                totalAmount = dto.OrderType == OrderType.Delivery ? deliveryFee : 0;
-            }
-            else
-            {
-                totalAmount = subTotal - discountAmount + deliveryFee;
-            }
-
-            // =========================
-            // ⭐ POINTS
-            // =========================
             int pointsEarned = isRewardOrder ? 0 : (int)(totalAmount / 20);
 
             // =========================
@@ -387,39 +374,31 @@ namespace Foodics.Controllers
             };
 
             // =========================
-            // 🛒 ITEMS (FIXED)
+            // 🛒 ITEMS
             // =========================
             if (!isRewardOrder && cart != null)
             {
-                foreach (var cartItem in cart.Items)
+                order.OrderItems = cart.Items.Select(cartItem => new OrderItem
                 {
-                    var sizePrice = cartItem.ProductSizeId != null
-                        ? _context.ProductSizes
-                            .Where(s => s.Id == cartItem.ProductSizeId)
-                            .Select(s => s.Price)
-                            .FirstOrDefault()
-                        : 0;
+                    ProductId = cartItem.ProductId,
+                    ProductName = cartItem.Product.Name,
+                    ProductSizeId = cartItem.ProductSizeId,
+                    Quantity = cartItem.Quantity,
+                    UnitPrice = cartItem.Price,
 
-                    order.OrderItems.Add(new OrderItem
+                    TotalPrice =
+                        (cartItem.Price + cartItem.Modifiers.Sum(m => m.Price))
+                        * cartItem.Quantity,
+
+                    Modifiers = cartItem.Modifiers.Select(m => new OrderItemModifier
                     {
-                        ProductId = cartItem.ProductId,
-                        ProductName = cartItem.Product.Name,
-                        ProductSizeId = cartItem.ProductSizeId,
-                        Quantity = cartItem.Quantity,
-                        UnitPrice = cartItem.Price,
-                        TotalPrice =
-                            (cartItem.Price + sizePrice + cartItem.Modifiers.Sum(m => m.Price))
-                            * cartItem.Quantity,
-                        Modifiers = cartItem.Modifiers.Select(m => new OrderItemModifier
-                        {
-                            ModifierOptionId = m.ModifierOptionId,
-                            Price = m.Price
-                        }).ToList()
-                    });
-                }
+                        ModifierOptionId = m.ModifierOptionId,
+                        Price = m.Price
+                    }).ToList()
+                }).ToList();
             }
 
-            // 🎁 Reward Order
+            // 🎁 Reward
             if (isRewardOrder && redeemedReward?.Reward?.Product != null)
             {
                 order.OrderItems.Add(new OrderItem
@@ -428,8 +407,7 @@ namespace Foodics.Controllers
                     ProductName = redeemedReward.Reward.Product.Name,
                     Quantity = 1,
                     UnitPrice = 0,
-                    TotalPrice = 0,
-                    Modifiers = new List<OrderItemModifier>()
+                    TotalPrice = 0
                 });
             }
 
@@ -441,7 +419,7 @@ namespace Foodics.Controllers
             if (redeemedReward != null)
             {
                 redeemedReward.IsUsed = true;
-                redeemedReward.UsedAt = DateTime.UtcNow;
+                redeemedReward.UsedAt = NowLocal(); // ✅ بدل DateTime.UtcNow
             }
 
             if (!isRewardOrder && cart != null)
@@ -451,29 +429,16 @@ namespace Foodics.Controllers
 
             await _context.SaveChangesAsync();
 
-            // =========================
-            // 📤 RESPONSE
-            // =========================
             return Ok(new
             {
                 order.Id,
-                order.UserId,
+                order.TotalAmount,
                 order.SubTotal,
                 order.DiscountAmount,
                 order.DeliveryFee,
-                order.TotalAmount,
-                order.IsRewardOrder,
-                order.PointsEarned,
-                Items = order.OrderItems.Select(oi => new
-                {
-                    oi.ProductId,
-                    oi.ProductName,
-                    oi.Quantity,
-                    oi.TotalPrice
-                })
+                order.PointsEarned
             });
         }
-
 
         private CartDto MapCartToDto(Cart cart)
         {
@@ -490,13 +455,8 @@ namespace Foodics.Controllers
                     Price = ci.Price,
                     Quantity = ci.Quantity,
 
-                    // ➕ Size Price في الـ response
-                    SizePrice = ci.ProductSizeId != null
-                        ? _context.ProductSizes
-                            .Where(s => s.Id == ci.ProductSizeId)
-                            .Select(s => s.Price)
-                            .FirstOrDefault()
-                        : 0,
+                    // ✅ جاي من Include مش Query
+                    SizePrice = ci.ProductSize?.Price ?? 0,
 
                     Modifiers = ci.Modifiers.Select(m => new CartItemModifierDto
                     {
@@ -505,17 +465,15 @@ namespace Foodics.Controllers
                         Price = m.Price
                     }).ToList()
                 }).ToList(),
+
                 SubTotal = cart.Items.Sum(i =>
-                    (i.Price + (i.ProductSizeId != null
-                        ? _context.ProductSizes.Where(s => s.Id == i.ProductSizeId).Select(s => s.Price).FirstOrDefault()
-                        : 0)
-                    + i.Modifiers.Sum(m => m.Price)) * i.Quantity),
+                    (i.Price + i.Modifiers.Sum(m => m.Price)) * i.Quantity
+                ),
 
                 Total = cart.Items.Sum(i =>
-                    (i.Price + (i.ProductSizeId != null
-                        ? _context.ProductSizes.Where(s => s.Id == i.ProductSizeId).Select(s => s.Price).FirstOrDefault()
-                        : 0)
-                    + i.Modifiers.Sum(m => m.Price)) * i.Quantity),
+                    (i.Price + i.Modifiers.Sum(m => m.Price)) * i.Quantity
+                ),
+
                 PromoCode = null
             };
         }
