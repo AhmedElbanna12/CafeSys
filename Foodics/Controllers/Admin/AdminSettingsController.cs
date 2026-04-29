@@ -61,5 +61,25 @@ namespace Foodics.Controllers.Admin
                 DeliveryFee = fee
             });
         }
+
+        [HttpPatch("appsettings/delivery")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ToggleDelivery([FromBody] bool isEnabled)
+        {
+            var settings = await _context.AppSettings.FirstOrDefaultAsync();
+
+            if (settings == null)
+                return NotFound("AppSettings not found");
+
+            settings.IsDeliveryEnabled = isEnabled;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Delivery status updated",
+                isEnabled
+            });
+        }
     }
 }

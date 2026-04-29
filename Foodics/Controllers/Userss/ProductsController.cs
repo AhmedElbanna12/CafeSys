@@ -18,68 +18,144 @@ namespace Foodics.Controllers
         {
             _context = context;
         }
+
+
+        private bool IsDiscountActive(Product product)
+        {
+            if (!product.DiscountPercentage.HasValue ||
+                !product.DiscountStart.HasValue ||
+                !product.DiscountEnd.HasValue)
+                return false;
+
+            var now = DateTime.Now; // 👈 Local time
+
+            return now >= product.DiscountStart && now <= product.DiscountEnd;
+        }
+
+
         [HttpGet]
-        [AllowAnonymous]
         public async Task<IActionResult> GetProducts()
         {
-            var baseUrl = $"{Request.Scheme}://{Request.Host}";
-
             var products = await _context.Products
-                .Where(p => p.IsAvailable)
                 .Include(p => p.Category)
                 .Include(p => p.Sizes)
                 .Include(p => p.ModifierGroups)
                     .ThenInclude(g => g.Options)
                 .ToListAsync();
 
-            var result = products.Select(product => new ProductResponseDto
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+            var result = products.Select(product =>
             {
-                Id = product.Id,
-                Name = product.Name,
-                Description = product.Description,
-                Price = product.Price,
+                var isDiscountActive = IsDiscountActive(product);
 
-                // 🔥 Discount Info
-                DiscountPercentage = product.DiscountPercentage,
-                DiscountStart = product.DiscountStart,
-                DiscountEnd = product.DiscountEnd,
-
-                DiscountedPrice = CalculateDiscountedPrice(product),
-
-                Calories = product.Calories,
-                PointsReward = product.PointsReward,
-
-                ImageUrl = string.IsNullOrEmpty(product.ImageUrl)
-                    ? null
-                    : $"{baseUrl}{product.ImageUrl}",
-
-                CategoryName = product.Category?.Name,
-
-                Sizes = product.Sizes.Select(s => new ProductSizeDto
+                return new ProductResponseDto
                 {
-                    Id = s.Id,
-                    Name = s.Name,
-                    Price = s.Price,
-                    IsDefault = s.IsDefault
-                }).ToList(),
+                    Id = product.Id,
+                    Name = product.Name,
+                    Description = product.Description,
+                    Price = product.Price,
+                    Calories = product.Calories,
+                    PointsReward = product.PointsReward,
+                    ImageUrl = string.IsNullOrEmpty(product.ImageUrl) ? null : $"{baseUrl}{product.ImageUrl}",
+                    IsAvailable = product.IsAvailable,
+                    CategoryName = product.Category?.Name,
 
-                ModifierGroups = product.ModifierGroups.Select(g => new ModifierGroupDto
-                {
-                    Id = g.Id,
-                    Name = g.Name,
-                    IsRequired = g.IsRequired,
-                    MaxSelections = g.MaxSelections,
-                    Options = g.Options.Select(o => new ModifierOptionDto
+                    Sizes = product.Sizes.Select(s => new ProductSizeDto
                     {
-                        Id = o.Id,
-                        Name = o.Name,
-                        ExtraPrice = o.ExtraPrice
-                    }).ToList()
-                }).ToList()
+                        Id = s.Id,
+                        Name = s.Name,
+                        Price = s.Price,
+                        IsDefault = s.IsDefault
+                    }).ToList(),
+
+                    ModifierGroups = product.ModifierGroups?.Select(g => new ModifierGroupDto
+                    {
+                        Id = g.Id,
+                        Name = g.Name,
+                        IsRequired = g.IsRequired,
+                        MaxSelections = g.MaxSelections,
+                        Options = g.Options.Select(o => new ModifierOptionDto
+                        {
+                            Id = o.Id,
+                            Name = o.Name,
+                            ExtraPrice = o.ExtraPrice
+                        }).ToList()
+                    }).ToList(),
+
+                    // 🔥 أهم تعديل
+                    DiscountedPrice = isDiscountActive ? CalculateDiscountedPrice(product) : null,
+                    DiscountPercentage = isDiscountActive ? product.DiscountPercentage : null,
+                    DiscountStart = product.DiscountStart,
+                    DiscountEnd = product.DiscountEnd
+                };
             });
 
             return Ok(result);
         }
+
+        //[HttpGet]
+        //[AllowAnonymous]
+        //public async Task<IActionResult> GetProducts()
+        //{
+        //    var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+        //    var products = await _context.Products
+        //        .Where(p => p.IsAvailable)
+        //        .Include(p => p.Category)
+        //        .Include(p => p.Sizes)
+        //        .Include(p => p.ModifierGroups)
+        //            .ThenInclude(g => g.Options)
+        //        .ToListAsync();
+
+        //    var result = products.Select(product => new ProductResponseDto
+        //    {
+        //        Id = product.Id,
+        //        Name = product.Name,
+        //        Description = product.Description,
+        //        Price = product.Price,
+
+        //        // 🔥 Discount Info
+        //        DiscountPercentage = product.DiscountPercentage,
+        //        DiscountStart = product.DiscountStart,
+        //        DiscountEnd = product.DiscountEnd,
+
+        //        DiscountedPrice = CalculateDiscountedPrice(product),
+
+        //        Calories = product.Calories,
+        //        PointsReward = product.PointsReward,
+
+        //        ImageUrl = string.IsNullOrEmpty(product.ImageUrl)
+        //            ? null
+        //            : $"{baseUrl}{product.ImageUrl}",
+
+        //        CategoryName = product.Category?.Name,
+
+        //        Sizes = product.Sizes.Select(s => new ProductSizeDto
+        //        {
+        //            Id = s.Id,
+        //            Name = s.Name,
+        //            Price = s.Price,
+        //            IsDefault = s.IsDefault
+        //        }).ToList(),
+
+        //        ModifierGroups = product.ModifierGroups.Select(g => new ModifierGroupDto
+        //        {
+        //            Id = g.Id,
+        //            Name = g.Name,
+        //            IsRequired = g.IsRequired,
+        //            MaxSelections = g.MaxSelections,
+        //            Options = g.Options.Select(o => new ModifierOptionDto
+        //            {
+        //                Id = o.Id,
+        //                Name = o.Name,
+        //                ExtraPrice = o.ExtraPrice
+        //            }).ToList()
+        //        }).ToList()
+        //    });
+
+        //    return Ok(result);
+        //}
 
         // 🔹 Get products grouped by category (Menu)
         [HttpGet("menu")]

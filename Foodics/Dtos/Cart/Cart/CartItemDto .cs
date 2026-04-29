@@ -9,6 +9,8 @@
         public int Quantity { get; set; }
         public int? ProductSizeId { get; set; }
         public string ProductSizeName { get; set; }
+
+        public decimal SizePrice { get; set; }
         public List<CartItemModifierDto> Modifiers { get; set; }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using Foodics.Dtos.Cart.Promocode;
 using Foodics.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using POSSystem.Data;
@@ -10,8 +9,6 @@ namespace Foodics.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
-
     public class PromoCodeController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -21,40 +18,74 @@ namespace Foodics.Controllers
             _context = context;
         }
 
-        // ➕ Add PromoCode
+        //[Authorize(Roles = "Admin")]
         [HttpPost("add")]
         public async Task<IActionResult> AddPromoCode(AddPromoCodeDto dto)
         {
-            if (await _context.PromoCodes.AnyAsync(p => p.Code == dto.Code))
+            if (string.IsNullOrWhiteSpace(dto.Code))
+                return BadRequest("Promo code is required.");
+
+            var normalizedCode = dto.Code.Trim().ToLower();
+
+            var exists = await _context.PromoCodes
+                .AnyAsync(p => p.Code != null && p.Code.Trim().ToLower() == normalizedCode);
+
+            if (exists)
                 return BadRequest("Promo code already exists.");
 
             var promo = new PromoCode
             {
-                Code = dto.Code,
+                Code = normalizedCode,
                 DiscountAmount = dto.DiscountAmount,
-                StartDate = dto.StartDate,
-                EndDate = dto.EndDate,
+                StartDate = DateTime.SpecifyKind(dto.StartDate, DateTimeKind.Utc),
+                EndDate = DateTime.SpecifyKind(dto.EndDate, DateTimeKind.Utc),
                 IsActive = true
             };
-
             _context.PromoCodes.Add(promo);
             await _context.SaveChangesAsync();
 
-            return Ok(new { promo.Id, promo.Code, promo.DiscountAmount, promo.StartDate, promo.EndDate });
+            // logging هنا صح
+            Console.WriteLine($"Local: {DateTime.Now}");
+            Console.WriteLine($"UTC: {DateTime.UtcNow}");
+
+            return Ok(new
+            {
+                promo.Id,
+                promo.Code,
+                promo.DiscountAmount,
+                promo.StartDate,
+                promo.EndDate
+            });
         }
 
-        // ✅ Validate PromoCode for Cart
+        [AllowAnonymous]
         [HttpGet("validate/{code}")]
         public async Task<IActionResult> ValidatePromoCode(string code)
         {
+            if (string.IsNullOrWhiteSpace(code))
+                return BadRequest("Promo code is required.");
+
+            var normalizedCode = code.Trim().ToLower();
+
+            var now = DateTime.UtcNow; // 🔥 مهم جدًا
+
             var promo = await _context.PromoCodes
-                .Where(p => p.Code == code && p.IsActive && p.StartDate <= DateTime.UtcNow && p.EndDate >= DateTime.UtcNow)
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(p =>
+                    p.Code != null &&
+                    p.Code.Trim().ToLower() == normalizedCode &&
+                    p.IsActive &&
+                    p.StartDate <= now &&
+                    p.EndDate >= now);
 
             if (promo == null)
                 return NotFound("Invalid or expired promo code.");
 
-            return Ok(new { promo.Id, promo.Code, promo.DiscountAmount });
+            return Ok(new
+            {
+                promo.Id,
+                promo.Code,
+                promo.DiscountAmount
+            });
         }
     }
 }

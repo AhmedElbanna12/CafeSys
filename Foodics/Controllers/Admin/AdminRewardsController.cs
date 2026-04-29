@@ -11,7 +11,6 @@ namespace Foodics.Controllers.Admin
 {
     [Route("api/admin/rewards")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
     public class AdminRewardsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -54,7 +53,6 @@ namespace Foodics.Controllers.Admin
         }
 
 
-        [Authorize(Roles = "Admin")]
         // Get All Rewards
         [HttpGet]
         public async Task<IActionResult> GetRewards()
@@ -74,7 +72,6 @@ namespace Foodics.Controllers.Admin
         }
 
 
-        [Authorize(Roles = "Admin")]
         // Get Reward By Id
         [HttpGet("{id}")]
         public async Task<IActionResult> GetReward(int id)

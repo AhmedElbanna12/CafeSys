@@ -26,7 +26,6 @@ namespace Foodics.Controllers.Admin
         }
 
 
-
         private decimal CalculateDiscountedPrice(Product product)
         {
             if (!product.DiscountPercentage.HasValue ||
@@ -35,22 +34,17 @@ namespace Foodics.Controllers.Admin
                 return product.Price;
 
             var now = DateTime.UtcNow;
+
+            // ضمان إن التواريخ بتتعامل كـ UTC
             var start = DateTime.SpecifyKind(product.DiscountStart.Value, DateTimeKind.Utc);
             var end = DateTime.SpecifyKind(product.DiscountEnd.Value, DateTimeKind.Utc);
 
-            // ✅ الـ logs هنا قبل المقارنة عشان تشوفهم دايماً
-            Console.WriteLine($"Now UTC   : {now}");
-            Console.WriteLine($"Start Kind: {start.Kind} | Value: {start}");
-            Console.WriteLine($"End Kind  : {end.Kind}   | Value: {end}");
-            Console.WriteLine($"Is in range: {now >= start && now <= end}");
-
             if (now >= start && now <= end)
-            {
                 return product.Price - (product.Price * (product.DiscountPercentage.Value / 100m));
-            }
 
             return product.Price;
         }
+
 
         [Authorize(Roles = "Admin")]
         [HttpPost]
@@ -84,14 +78,12 @@ namespace Foodics.Controllers.Admin
                 Description = dto.Description,
                 Price = dto.Price,
                 DiscountPercentage = dto.DiscountPercentage,
-
-                // ✅ خزّنها صراحةً كـ UTC
                 DiscountStart = dto.DiscountStart.HasValue
-    ? dto.DiscountStart.Value.ToUniversalTime()
+    ? DateTime.SpecifyKind(dto.DiscountStart.Value, DateTimeKind.Utc)
     : null,
 
                 DiscountEnd = dto.DiscountEnd.HasValue
-    ? dto.DiscountEnd.Value.ToUniversalTime()
+    ? DateTime.SpecifyKind(dto.DiscountEnd.Value, DateTimeKind.Utc)
     : null,
 
                 CategoryId = dto.CategoryId,
@@ -258,7 +250,6 @@ namespace Foodics.Controllers.Admin
 
 
         [Authorize(Roles = "Admin")]
-        // Add Modifier Option
         [HttpPost("modifier-groups/{groupId}/options")]
 public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto dto)
 {
@@ -303,7 +294,7 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
         // 🔹 Get all products with discounted price
         [HttpGet]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> GetProducts()
+        public async Task<IActionResult> GetProductsAdmin()
         {
             var products = await _context.Products
                 .Include(p => p.Category)
@@ -413,8 +404,6 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
         }
 
 
-
-
         [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         [RequestSizeLimit(10_000_000)]
@@ -424,20 +413,21 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
             if (product == null)
                 return NotFound("Product not found");
 
-            // Handle Image Upload
+            // ✅ Handle Image Upload (اختياري)
             if (dto.Image != null)
             {
                 var uploadsFolder = Path.Combine(_env.WebRootPath, "images", "products");
                 if (!Directory.Exists(uploadsFolder))
                     Directory.CreateDirectory(uploadsFolder);
 
-                // Delete old image
+                // حذف الصورة القديمة
                 if (!string.IsNullOrEmpty(product.ImageUrl))
                 {
                     var oldFile = Path.Combine(
                         _env.WebRootPath,
                         product.ImageUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar)
                     );
+
                     if (System.IO.File.Exists(oldFile))
                         System.IO.File.Delete(oldFile);
                 }
@@ -453,16 +443,33 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
                 product.ImageUrl = $"/images/products/{uniqueFileName}";
             }
 
-            // Update باقي البيانات
-            product.Name = dto.Name;
-            product.Description = dto.Description;
-            product.Price = dto.Price;
-            product.DiscountPercentage = dto.DiscountPercentage;
-            product.DiscountStart = dto.DiscountStart;
-            product.DiscountEnd = dto.DiscountEnd;
-            product.Calories = dto.Calories;
-            product.PointsReward = dto.PointsReward;
-            product.CategoryId = dto.CategoryId;
+            // ✅ Partial Update (مهم)
+            if (dto.Name != null)
+                product.Name = dto.Name;
+
+            if (dto.Description != null)
+                product.Description = dto.Description;
+
+            if (dto.Price.HasValue)
+                product.Price = dto.Price.Value;
+
+            if (dto.DiscountPercentage.HasValue)
+                product.DiscountPercentage = dto.DiscountPercentage;
+
+            if (dto.DiscountStart.HasValue)
+                product.DiscountStart = dto.DiscountStart;
+
+            if (dto.DiscountEnd.HasValue)
+                product.DiscountEnd = dto.DiscountEnd;
+
+            if (dto.Calories.HasValue)
+                product.Calories = dto.Calories.Value;
+
+            if (dto.PointsReward.HasValue)
+                product.PointsReward = dto.PointsReward.Value;
+
+            if (dto.CategoryId.HasValue)
+                product.CategoryId = dto.CategoryId.Value;
 
             await _context.SaveChangesAsync();
 
@@ -490,6 +497,7 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
                 ImageUrl = string.IsNullOrEmpty(updatedProduct.ImageUrl) ? null : $"{baseUrl}{updatedProduct.ImageUrl}",
                 IsAvailable = updatedProduct.IsAvailable,
                 CategoryName = updatedProduct.Category?.Name,
+
                 Sizes = updatedProduct.Sizes?.Select(s => new ProductSizeDto
                 {
                     Id = s.Id,
@@ -497,6 +505,7 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
                     Price = s.Price,
                     IsDefault = s.IsDefault
                 }).ToList(),
+
                 ModifierGroups = updatedProduct.ModifierGroups?.Select(g => new ModifierGroupDto
                 {
                     Id = g.Id,
@@ -510,6 +519,7 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
                         ExtraPrice = o.ExtraPrice
                     }).ToList()
                 }).ToList(),
+
                 DiscountedPrice = CalculateDiscountedPrice(updatedProduct)
             };
 
@@ -892,6 +902,28 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
             await _context.SaveChangesAsync();
 
             return Ok("Product deleted successfully");
+        }
+
+
+        [HttpGet("{productId}/sizes")]
+        public async Task<IActionResult> GetSizesByProduct(int productId)
+        {
+            var product = await _context.Products
+                .Include(p => p.Sizes)
+                .FirstOrDefaultAsync(p => p.Id == productId);
+
+            if (product == null)
+                return NotFound("Product not found");
+
+            var result = product.Sizes.Select(s => new ProductSizeDto
+            {
+                Id = s.Id,
+                Name = s.Name,
+                Price = s.Price,
+                IsDefault = s.IsDefault
+            });
+
+            return Ok(result);
         }
     }
 }

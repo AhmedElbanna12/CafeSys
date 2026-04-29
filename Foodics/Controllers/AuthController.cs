@@ -175,7 +175,7 @@ namespace Foodics.Controllers
 
             var encodedToken = WebUtility.UrlEncode(token);
 
-            var resetLink = $"https://yourfrontend.com/reset-password?email={model.Email}&token={encodedToken}";
+            var resetLink = $"https://orderinsights.vercel.app/reset-password?email={model.Email}&token={encodedToken}";
 
 //var resetLink = $"myapp://reset-password?email={{model.Email}}&token={{Uri.EscapeDataString(token)\r\n";
 

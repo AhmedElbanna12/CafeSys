@@ -15,7 +15,6 @@ namespace Foodics.Controllers.Admin
     public class AdminUsersController : ControllerBase
     {
         private readonly UserManager<AppUser> _userManager;
-
         public AdminUsersController(UserManager<AppUser> userManager)
         {
             _userManager = userManager;

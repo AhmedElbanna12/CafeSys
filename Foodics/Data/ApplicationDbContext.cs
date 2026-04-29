@@ -84,6 +84,7 @@ namespace POSSystem.Data
                 .HasForeignKey(c => c.CartItemId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+
             // =========================
             // 🔴 ORDER RELATIONS
             // =========================
@@ -133,6 +134,24 @@ namespace POSSystem.Data
                 .WithOne(o => o.ModifierGroup)
                 .HasForeignKey(o => o.ModifierGroupId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+
+
+            builder.Entity<PromoCode>()
+    .Property(p => p.DiscountAmount)
+    .HasPrecision(18, 2);
+
+            builder.Entity<Product>()
+                .Property(p => p.DiscountPercentage)
+                .HasPrecision(5, 2);
+
+            builder.Entity<Payment>()
+                .Property(p => p.Amount)
+                .HasPrecision(18, 2);
+
+            builder.Entity<AppSettings>()
+                .Property(p => p.DeliveryFee)
+                .HasPrecision(18, 2);
 
             // =========================
             // 🔴 PRECISION FIXES

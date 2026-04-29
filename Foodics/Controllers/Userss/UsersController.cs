@@ -31,7 +31,8 @@ namespace Foodics.Controllers.User
             var result = new
             {
                 user.Id,
-                user.UserName,
+                user.UserName ,
+                user.FullName , 
                 user.Email,
                 user.PhoneNumber , 
                 user.CustomerCode
