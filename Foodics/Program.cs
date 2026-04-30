@@ -125,7 +125,9 @@ namespace Foodics
                     policy.WithOrigins(
                             
                              "https://cafe-app-amber.vercel.app" ,
+                             "https://orderinsights.vercel.app" , 
                               "http://localhost:3000",
+                              "http://localhost:8080",
                               "http://localhost:5173",
                               "http://localhost:4173",
                               "http://192.168.1.96:5173",
@@ -157,7 +159,20 @@ namespace Foodics
                 var userManager = services.GetRequiredService<UserManager<User>>();
                 var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
 
-                await SeedData.InitializeAsync(context, userManager, roleManager, adminEmail, adminPassword, adminphonenumber);
+                var admins = new List<(string Email, string Password, string Phone)>
+{
+    (adminEmail, adminPassword, adminphonenumber)
+};
+
+                // ✅ غيّر builder.Configuration لـ Environment.GetEnvironmentVariable
+                var admin2Email = Environment.GetEnvironmentVariable("ADMIN2_EMAIL");
+                var admin2Password = Environment.GetEnvironmentVariable("ADMIN2_PASSWORD");
+                var admin2Phone = Environment.GetEnvironmentVariable("ADMIN2_PHONE");
+
+                if (!string.IsNullOrEmpty(admin2Email) && !string.IsNullOrEmpty(admin2Password))
+                    admins.Add((admin2Email, admin2Password, admin2Phone ?? ""));
+
+                await SeedData.InitializeAsync(context, userManager, roleManager, admins);
             }
 
             // Configure the HTTP request pipeline.

@@ -88,8 +88,8 @@ public class NotificationsController : ControllerBase
 
         await _context.SaveChangesAsync();
 
-        // 2. هات كل التوكنز
         var tokens = await _context.UserDevices
+            .Where(x => !string.IsNullOrEmpty(x.DeviceToken))
             .Select(x => x.DeviceToken)
             .ToListAsync();
 
@@ -260,23 +260,4 @@ public class NotificationsController : ControllerBase
         return Ok();
     }
 
-    [HttpPost("test-notification")]
-    public async Task<IActionResult> TestNotification([FromBody] string userId)
-    {
-        var tokens = await _context.UserDevices
-            .Where(x => x.UserId == userId)
-            .Select(x => x.DeviceToken)
-            .ToListAsync();
-
-        foreach (var token in tokens)
-        {
-            await _fcmService.SendAsync(
-                token,
-                " Test Notification",
-                "لو وصلتك الرسالة يبقى كله شغال"
-            );
-        }
-
-        return Ok("Sent");
-    }
 }

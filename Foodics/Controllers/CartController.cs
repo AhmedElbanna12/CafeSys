@@ -53,8 +53,27 @@ namespace Foodics.Controllers
             return product.Price;
         }
 
+
+        // ✅ بتاخد basePrice (سعر الـ size) وبتطبق عليه الـ discount لو شغّال
+        private decimal CalculateDiscountedPriceFromSize(Product product, decimal basePrice)
+        {
+            if (!product.DiscountPercentage.HasValue ||
+                !product.DiscountStart.HasValue ||
+                !product.DiscountEnd.HasValue)
+                return basePrice;
+
+            var now = NowLocal();
+            var start = product.DiscountStart.Value;
+            var end = product.DiscountEnd.Value;
+
+            if (now >= start && now <= end)
+                return basePrice - (basePrice * (product.DiscountPercentage.Value / 100m));
+
+            return basePrice;
+        }
         private string? GetUserId() => User.FindFirstValue("userId");
 
+        // ➕ Add to Cart
         // ➕ Add to Cart
         [HttpPost("add")]
         public async Task<IActionResult> AddToCart(AddToCartDto dto)
@@ -87,6 +106,9 @@ namespace Foodics.Controllers
             if (productSize == null)
                 return BadRequest("Product size is required");
 
+            // ✅ طبّق الـ discount على سعر الـ size مش الـ product
+            var sizePrice = CalculateDiscountedPriceFromSize(product, productSize.Price);
+
             var item = cart.Items.FirstOrDefault(x =>
                 x.ProductId == dto.ProductId &&
                 x.ProductSizeId == dto.ProductSizeId &&
@@ -94,15 +116,10 @@ namespace Foodics.Controllers
                     .SequenceEqual(dto.ModifierOptionIds.OrderBy(id => id))
             );
 
-            // ✅ السعر بقى من الـ size فقط
-            var sizePrice = productSize.Price;
-
             if (item != null)
             {
                 item.Quantity += dto.Quantity;
-
-                // 🔥 تثبيت السعر = size فقط
-                item.Price = sizePrice;
+                item.Price = sizePrice; // ✅ update السعر لو اتغير الـ discount
             }
             else
             {
@@ -111,7 +128,7 @@ namespace Foodics.Controllers
                     ProductId = dto.ProductId,
                     ProductSizeId = dto.ProductSizeId,
                     Quantity = dto.Quantity,
-                    Price = sizePrice, // 👈 التعديل هنا
+                    Price = sizePrice, // ✅ السعر بعد الـ discount
                     Modifiers = new List<CartItemModifier>()
                 };
 

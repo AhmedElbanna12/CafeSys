@@ -7,12 +7,10 @@ namespace POSSystem.Data
     public static class SeedData
     {
         public static async Task InitializeAsync(
-    ApplicationDbContext context,
-    UserManager<User> userManager,
-    RoleManager<IdentityRole> roleManager,
-    string adminEmail,
-    string adminPassword , 
-    string adminphonenumber)  // ← هنا
+      ApplicationDbContext context,
+      UserManager<User> userManager,
+      RoleManager<IdentityRole> roleManager,
+      List<(string Email, string Password, string Phone)> admins)
         {
             context.Database.Migrate();
 
@@ -24,22 +22,28 @@ namespace POSSystem.Data
                     await roleManager.CreateAsync(new IdentityRole(role));
             }
 
-            // 2️⃣ Admin user
-            if (await userManager.FindByEmailAsync(adminEmail) == null)
+            // 2️⃣ Admins 🔥
+            foreach (var adminData in admins)
             {
-                var admin = new User
+                if (await userManager.FindByEmailAsync(adminData.Email) == null)
                 {
-                    UserName = adminEmail,
-                    Email = adminEmail,
-                    PhoneNumber = adminphonenumber,
-                    FullName = "System Admin",
-                    EmailConfirmed = true
-                };
-                await userManager.CreateAsync(admin, adminPassword);
-                await userManager.AddToRoleAsync(admin, "Admin");
-            }
+                    var admin = new User
+                    {
+                        UserName = adminData.Email,
+                        Email = adminData.Email,
+                        PhoneNumber = adminData.Phone,
+                        FullName = "System Admin",
+                        EmailConfirmed = true
+                    };
 
-       
+                    var result = await userManager.CreateAsync(admin, adminData.Password);
+
+                    if (result.Succeeded)
+                    {
+                        await userManager.AddToRoleAsync(admin, "Admin");
+                    }
+                }
+            }
             // 3️⃣ Branch
             if (!context.Branches.Any())
             {
