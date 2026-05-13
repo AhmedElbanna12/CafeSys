@@ -32,6 +32,7 @@ namespace Foodics.Controllers.Admin
         {
             var orders = await _context.Orders
                 .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Modifiers)
                 .Include(o => o.User)
                 .OrderByDescending(o => o.Id)
                 .ToListAsync();
