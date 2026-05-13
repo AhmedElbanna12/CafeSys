@@ -27,14 +27,77 @@ namespace Foodics.Controllers.Admin
         }
 
         // 📋 كل الأوردرات
+
+        //[HttpGet]
+        //public async Task<IActionResult> GetAllOrders()
+        //{
+        //    var orders = await _context.Orders
+        //        .Include(o => o.OrderItems)
+        //            .ThenInclude(oi => oi.Modifiers)
+        //        .Include(o => o.User)
+        //        .OrderByDescending(o => o.Id)
+        //        .ToListAsync();
+
+        //    return Ok(orders);
+        //}
+
         [HttpGet]
         public async Task<IActionResult> GetAllOrders()
         {
             var orders = await _context.Orders
                 .Include(o => o.OrderItems)
                     .ThenInclude(oi => oi.Modifiers)
+                        .ThenInclude(m => m.ModifierOption)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.ProductSize)
                 .Include(o => o.User)
                 .OrderByDescending(o => o.Id)
+                .Select(o => new
+                {
+                    o.Id,
+                    o.UserId,
+                    o.SubTotal,
+                    o.DiscountAmount,
+                    o.TotalAmount,
+                    o.PointsEarned,
+                    o.PointsRedeemed,
+                    o.CreatedAt,
+                    o.OrderStatus,
+                    o.PaymentStatus,
+                    o.PaymentMethod,
+                    o.ShippingAddress,
+                    o.OrderType,
+                    o.DeliveryFee,
+                    o.IsRewardOrder,
+
+                    User = o.User,
+
+                    OrderItems = o.OrderItems.Select(oi => new
+                    {
+                        oi.Id,
+                        oi.OrderId,
+                        oi.ProductId,
+                        oi.ProductName,
+
+                        // Size Name
+                        oi.ProductSizeId,
+                        SizeName = oi.ProductSize.Name,
+
+                        oi.Quantity,
+                        oi.UnitPrice,
+                        oi.DiscountAmount,
+                        oi.TotalPrice,
+
+                        // Modifiers
+                        Modifiers = oi.Modifiers.Select(m => new
+                        {
+                            // بدل الـ IDs
+                            ModifierOptionName = m.ModifierOption.Name,
+
+                            m.Price
+                        })
+                    })
+                })
                 .ToListAsync();
 
             return Ok(orders);
