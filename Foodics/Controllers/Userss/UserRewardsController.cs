@@ -61,6 +61,7 @@ namespace Foodics.Controllers.User
             });
         }
 
+
         // POST: api/userrewards/redeem
         [HttpPost("redeem")]
         [Authorize]
@@ -71,7 +72,12 @@ namespace Foodics.Controllers.User
                 return Unauthorized("User not identified");
 
             var reward = await _context.Rewards
-                .FirstOrDefaultAsync(r => r.Id == dto.RewardId && r.IsActive);
+      .Include(r => r.Product)
+      .FirstOrDefaultAsync(r =>
+          r.Id == dto.RewardId &&
+          r.IsActive &&
+          r.Product != null &&
+          !r.Product.IsDeleted);
 
             if (reward == null)
                 return NotFound("Reward not found or inactive");

@@ -18,7 +18,7 @@ namespace Foodics.Controllers.Admin
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
 
-        public AdminProductsController(ApplicationDbContext context , IWebHostEnvironment env)
+        public AdminProductsController(ApplicationDbContext context, IWebHostEnvironment env)
         {
             _context = context;
             _env = env;
@@ -261,52 +261,53 @@ namespace Foodics.Controllers.Admin
 
         [Authorize(Roles = "Admin")]
         [HttpPost("modifier-groups/{groupId}/options")]
-public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto dto)
-{
-    var group = await _context.ModifierGroups.FindAsync(groupId);
-    if (group == null)
-        return NotFound("Modifier group not found");
-
-    var option = new ModifierOption
-    {
-        Name = dto.Name,
-        ExtraPrice = dto.ExtraPrice,
-        ModifierGroupId = groupId
-    };
-
-    _context.ModifierOptions.Add(option);
-    await _context.SaveChangesAsync();
-
-    // 🔹 Load group with all options
-    var updatedGroup = await _context.ModifierGroups
-        .Include(g => g.Options)
-        .FirstOrDefaultAsync(g => g.Id == groupId);
-
-    var result = new ModifierGroupDto
-    {
-        Id = updatedGroup.Id,
-        Name = updatedGroup.Name,
-        IsRequired = updatedGroup.IsRequired,
-        MaxSelections = updatedGroup.MaxSelections,
-        Options = updatedGroup.Options.Select(o => new ModifierOptionDto
+        public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto dto)
         {
-            Id = o.Id,
-            Name = o.Name,
-            ExtraPrice = o.ExtraPrice
-        }).ToList()
-    };
+            var group = await _context.ModifierGroups.FindAsync(groupId);
+            if (group == null)
+                return NotFound("Modifier group not found");
 
-    return Ok(result);
-}
+            var option = new ModifierOption
+            {
+                Name = dto.Name,
+                ExtraPrice = dto.ExtraPrice,
+                ModifierGroupId = groupId
+            };
+
+            _context.ModifierOptions.Add(option);
+            await _context.SaveChangesAsync();
+
+            // 🔹 Load group with all options
+            var updatedGroup = await _context.ModifierGroups
+                .Include(g => g.Options)
+                .FirstOrDefaultAsync(g => g.Id == groupId);
+
+            var result = new ModifierGroupDto
+            {
+                Id = updatedGroup.Id,
+                Name = updatedGroup.Name,
+                IsRequired = updatedGroup.IsRequired,
+                MaxSelections = updatedGroup.MaxSelections,
+                Options = updatedGroup.Options.Select(o => new ModifierOptionDto
+                {
+                    Id = o.Id,
+                    Name = o.Name,
+                    ExtraPrice = o.ExtraPrice
+                }).ToList()
+            };
+
+            return Ok(result);
+        }
 
 
-        
+
         // 🔹 Get all products with discounted price
         [HttpGet]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetProductsAdmin()
         {
             var products = await _context.Products
+    .Where(p => !p.IsDeleted)
                 .Include(p => p.Category)
                 .Include(p => p.Sizes)
                 .Include(p => p.ModifierGroups)
@@ -894,50 +895,19 @@ public async Task<IActionResult> AddOption(int groupId, CreateModifierOptionDto 
         public async Task<IActionResult> DeleteProduct(int id)
         {
             var product = await _context.Products
-                .Include(p => p.Sizes)
-                .Include(p => p.ModifierGroups)
-                    .ThenInclude(g => g.Options)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (product == null)
-                return NotFound("Product not found");
+                return NotFound(new { message = "Product not found" });
 
-            // 🔥 delete nested data
-            foreach (var group in product.ModifierGroups)
-            {
-                _context.ModifierOptions.RemoveRange(group.Options);
-            }
-
-            _context.ModifierGroups.RemoveRange(product.ModifierGroups);
-            _context.ProductSizes.RemoveRange(product.Sizes);
-
-            _context.Products.Remove(product);
+            product.IsDeleted = true;
 
             await _context.SaveChangesAsync();
 
-            return Ok("Product deleted successfully");
-        }
-
-
-        [HttpGet("{productId}/sizes")]
-        public async Task<IActionResult> GetSizesByProduct(int productId)
-        {
-            var product = await _context.Products
-                .Include(p => p.Sizes)
-                .FirstOrDefaultAsync(p => p.Id == productId);
-
-            if (product == null)
-                return NotFound("Product not found");
-
-            var result = product.Sizes.Select(s => new ProductSizeDto
+            return Ok(new
             {
-                Id = s.Id,
-                Name = s.Name,
-                Price = s.Price,
-                IsDefault = s.IsDefault
+                message = "Product deleted successfully"
             });
-
-            return Ok(result);
         }
     }
-}
+    }

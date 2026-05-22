@@ -13,7 +13,6 @@ public class JwtService
     {
         _userManager = userManager;
     }
-
     public async Task<string> GenerateAccessToken(User user)
     {
         var roles = await _userManager.GetRolesAsync(user);

@@ -37,11 +37,12 @@ namespace Foodics.Controllers
         public async Task<IActionResult> GetProducts()
         {
             var products = await _context.Products
-                .Include(p => p.Category)
-                .Include(p => p.Sizes)
-                .Include(p => p.ModifierGroups)
-                    .ThenInclude(g => g.Options)
-                .ToListAsync();
+      .Where(p => !p.IsDeleted)
+      .Include(p => p.Category)
+      .Include(p => p.Sizes)
+      .Include(p => p.ModifierGroups)
+          .ThenInclude(g => g.Options)
+      .ToListAsync();
 
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
@@ -164,7 +165,8 @@ namespace Foodics.Controllers
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
             var data = await _context.Categories
-                .Include(c => c.Products.Where(p => p.IsAvailable))
+                .Include(c => c.Products
+    .Where(p => p.IsAvailable && !p.IsDeleted))
                 .Select(c => new
                 {
                     categoryId = c.Id,

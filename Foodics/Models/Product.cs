@@ -27,6 +27,7 @@ namespace Foodics.Models
         public DateTime? DiscountStart { get; set; }
         public DateTime? DiscountEnd { get; set; }
 
+        public bool IsDeleted { get; set; } = false;
 
         [ForeignKey("Category")]
         public int CategoryId { get; set; }

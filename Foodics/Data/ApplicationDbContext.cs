@@ -85,6 +85,10 @@ namespace POSSystem.Data
                 .OnDelete(DeleteBehavior.Cascade);
 
 
+            builder.Entity<Product>()
+    .HasQueryFilter(p => !p.IsDeleted);
+
+
             // =========================
             // 🔴 ORDER RELATIONS
             // =========================
