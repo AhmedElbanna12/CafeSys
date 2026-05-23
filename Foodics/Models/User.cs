@@ -20,6 +20,6 @@ namespace Foodics.Models
 
 
         public string ? RefreshToken { get; set; }
-        public DateTime RefreshTokenExpiryTime { get; set; }
+        public DateTime  ? RefreshTokenExpiryTime { get; set; }
     }
 }

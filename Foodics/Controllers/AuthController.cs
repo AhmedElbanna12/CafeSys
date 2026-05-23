@@ -2,6 +2,7 @@
 using Foodics.Models;
 using Foodics.Services;
 using Foodics.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -202,6 +203,34 @@ namespace Foodics.Controllers
                 return BadRequest(result.Errors);
 
             return Ok("Password reset successfully.");
+        }
+
+
+
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            var userId = User?.FindFirst("userId")?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("User not found");
+
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
+                return NotFound("User not found");
+
+            // 🔥 invalidate refresh token
+            user.RefreshToken = null;
+            user.RefreshTokenExpiryTime = null;
+
+            await _userManager.UpdateAsync(user);
+
+            return Ok(new
+            {
+                message = "Logged out successfully"
+            });
         }
     }
 }
