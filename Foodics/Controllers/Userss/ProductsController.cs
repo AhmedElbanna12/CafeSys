@@ -27,9 +27,15 @@ namespace Foodics.Controllers
                 !product.DiscountEnd.HasValue)
                 return false;
 
-            var now = DateTime.Now; // 👈 Local time
+            var now = DateTime.UtcNow.AddHours(3);
+            var start = product.DiscountStart.Value;
+            var end = product.DiscountEnd.Value;
 
-            return now >= product.DiscountStart && now <= product.DiscountEnd;
+            // ✅ debug مؤقت
+            Console.WriteLine($"NOW: {now} | START: {start} | END: {end}");
+            Console.WriteLine($"Active: {now >= start && now <= end}");
+
+            return now >= start && now <= end;
         }
 
 
@@ -84,7 +90,6 @@ namespace Foodics.Controllers
                         }).ToList()
                     }).ToList(),
 
-                    // 🔥 أهم تعديل
                     DiscountedPrice = isDiscountActive ? CalculateDiscountedPrice(product) : null,
                     DiscountPercentage = isDiscountActive ? product.DiscountPercentage : null,
                     DiscountStart = product.DiscountStart,

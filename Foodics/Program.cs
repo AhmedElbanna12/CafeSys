@@ -144,10 +144,32 @@ namespace Foodics
             builder.Services.AddScoped<FcmService>();
 
 
-            FirebaseApp.Create(new AppOptions()
+
+            var firebaseKeyPath = Path.Combine(Directory.GetCurrentDirectory(), "firebase-key.json");
+
+            if (FirebaseApp.DefaultInstance == null)
             {
-                Credential = GoogleCredential.FromFile("firebase-key.json")
-            });
+                FirebaseApp.Create(new AppOptions()
+                {
+                    Credential = GoogleCredential.FromFile(firebaseKeyPath)
+                });
+            }
+
+            //// ✅ وحطّ ده بدله
+            //var firebaseJson = Environment.GetEnvironmentVariable("FIREBASE_CREDENTIALS_JSON");
+
+            //if (FirebaseApp.DefaultInstance == null)
+            //{
+            //    FirebaseApp.Create(new AppOptions()
+            //    {
+            //        Credential = GoogleCredential.FromJson(firebaseJson)
+            //    });
+            //}
+
+            //FirebaseApp.Create(new AppOptions()
+            //{
+            //    Credential = GoogleCredential.FromFile("firebase-key.json")
+            //});
 
             var app = builder.Build();
 

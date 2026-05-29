@@ -1,4 +1,5 @@
-﻿using Foodics.Dtos.Admin.notification;
+﻿using FirebaseAdmin;
+using Foodics.Dtos.Admin.notification;
 using Foodics.Hub;
 using Foodics.Models;
 using Foodics.Services;
@@ -68,14 +69,11 @@ public class NotificationsController : ControllerBase
     //    return Ok("Notification sent to all users");
     //}
 
-
     [Authorize(Roles = "Admin")]
     [HttpPost("send-to-all")]
     public async Task<IActionResult> SendToAll([FromBody] NotificationDto dto)
     {
-        // 1. خزن في DB (اختياري لكن مهم)
         var users = await _context.Users.ToListAsync();
-
         foreach (var user in users)
         {
             _context.Notifications.Add(new Notification
@@ -85,7 +83,6 @@ public class NotificationsController : ControllerBase
                 Body = dto.Body
             });
         }
-
         await _context.SaveChangesAsync();
 
         var tokens = await _context.UserDevices
@@ -93,20 +90,26 @@ public class NotificationsController : ControllerBase
             .Select(x => x.DeviceToken)
             .ToListAsync();
 
-        // 3. ابعت لكل الأجهزة
+        // ✅ لو مفيش tokens متبعتش error
+        if (!tokens.Any())
+            return Ok("Notifications saved. No device tokens found.");
+
+        int sent = 0, failed = 0;
         foreach (var token in tokens)
         {
-            await _fcmService.SendAsync(
-                token,
-                dto.Title,
-                dto.Body,
-                new Dictionary<string, string>
-                {
-                { "type", "admin_message" }
-                });
+            try
+            {
+                await _fcmService.SendAsync(token, dto.Title, dto.Body,
+                    new Dictionary<string, string> { { "type", "admin_message" } });
+                sent++;
+            }
+            catch
+            {
+                failed++;
+            }
         }
 
-        return Ok("Notification sent to all users");
+        return Ok($"Done. Sent: {sent}, Failed: {failed}");
     }
 
     // =====================
@@ -242,21 +245,41 @@ public class NotificationsController : ControllerBase
     [HttpPost("register-device")]
     public async Task<IActionResult> RegisterDevice([FromBody] RegisterDeviceDto dto)
     {
-        var userId = User.FindFirst("userId")?.Value;
-        var exists = await _context.UserDevices
-            .AnyAsync(x => x.DeviceToken == dto.Token);
+        // ✅ لو الـ token فاضي مترجعش error بس متعملش حاجة
+        if (string.IsNullOrEmpty(dto.Token))
+            return BadRequest("Device token is required");
 
-        if (!exists)
+        var userId = User.FindFirst("userId")?.Value;
+
+        // ✅ لو الـ token موجود لحد تاني، شيله منه الأول
+        var existing = await _context.UserDevices
+            .FirstOrDefaultAsync(x => x.DeviceToken == dto.Token);
+
+        if (existing != null)
+        {
+            existing.UserId = userId; // حوّله للـ user الحالي
+            await _context.SaveChangesAsync();
+            return Ok();
+        }
+
+        // ✅ لو الـ user عنده device قبل كده، حدّثه بدل ما تضيف جديد
+        var userDevice = await _context.UserDevices
+            .FirstOrDefaultAsync(x => x.UserId == userId);
+
+        if (userDevice != null)
+        {
+            userDevice.DeviceToken = dto.Token;
+        }
+        else
         {
             _context.UserDevices.Add(new UserDevice
             {
                 UserId = userId,
                 DeviceToken = dto.Token
             });
-
-            await _context.SaveChangesAsync();
         }
 
+        await _context.SaveChangesAsync();
         return Ok();
     }
 
