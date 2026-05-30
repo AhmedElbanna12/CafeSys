@@ -435,13 +435,12 @@ namespace Foodics.Controllers
             if (redeemedReward != null)
             {
                 redeemedReward.IsUsed = true;
-                redeemedReward.UsedAt = NowLocal(); // ✅ بدل DateTime.UtcNow
+                redeemedReward.UsedAt = NowLocal();
             }
 
+            // ✅ Cascade هيمسح CartItems و CartItemModifiers تلقائي
             if (!isRewardOrder && cart != null)
-            {
                 _context.Carts.Remove(cart);
-            }
 
             await _context.SaveChangesAsync();
 

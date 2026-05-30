@@ -60,6 +60,15 @@ namespace POSSystem.Data
             // 🔴 CART RELATIONS
             // =========================
 
+
+            builder.Entity<Cart>()
+    .HasMany(c => c.Items)
+    .WithOne()
+    .HasForeignKey("CartId")
+    .OnDelete(DeleteBehavior.Cascade);
+
+
+
             builder.Entity<CartItem>()
       .HasOne(ci => ci.Product)
       .WithMany()
