@@ -117,7 +117,7 @@ namespace Foodics.Controllers
             var refreshToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
 
             user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMinutes(3); // ✅ 5 days
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(5); // ✅ 5 days
 
             await _userManager.UpdateAsync(user);
 
@@ -153,7 +153,7 @@ namespace Foodics.Controllers
             var newRefreshToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
 
             user.RefreshToken = newRefreshToken;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddMinutes(3);
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(5);
 
             await _userManager.UpdateAsync(user);
 

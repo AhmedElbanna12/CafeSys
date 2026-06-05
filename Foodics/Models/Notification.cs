@@ -4,6 +4,16 @@
     {
         public int Id { get; set; }
         public string ?  UserId { get; set; } // optional لكل مستخدم
+
+
+        public string? TitleAr { get; set; }
+
+        public string? TitleEn { get; set; }
+
+        public string? BodyAr { get; set; }
+
+        public string? BodyEn { get; set; }
+
         public string Title { get; set; }
         public string Body { get; set; }
         public bool IsRead { get; set; } = false;

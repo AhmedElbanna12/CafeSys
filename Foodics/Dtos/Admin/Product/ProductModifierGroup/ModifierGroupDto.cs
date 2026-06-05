@@ -1,4 +1,6 @@
-﻿namespace Foodics.Dtos.Admin.Product
+﻿using Foodics.Dtos.Admin.Product.ProductModifierOption;
+
+namespace Foodics.Dtos.Admin.Product.ProductModifierGroup
 {
     public class ModifierGroupDto
     {

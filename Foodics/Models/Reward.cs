@@ -8,6 +8,11 @@ namespace Foodics.Models
         [Key]
         public int Id { get; set; }
         public string Name { get; set; }
+
+        public string? NameAr { get; set; }
+
+        public string? NameEn { get; set; }
+
         public int PointsRequired { get; set; }
 
         [ForeignKey("Product")]

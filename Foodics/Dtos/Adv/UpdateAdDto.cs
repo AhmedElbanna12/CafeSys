@@ -2,8 +2,11 @@
 {
     public class UpdateAdDto
     {
-        public string Title { get; set; }
-        public string Description { get; set; }
+        public string ? TitleAr { get; set; } = string.Empty;
+        public string ?TitleEn { get; set; } = string.Empty;
+
+        public string ? DescriptionAr { get; set; } = string.Empty;
+        public string ?DescriptionEn { get; set; } = string.Empty;
         public IFormFile? Image { get; set; } // optional
     }
 }

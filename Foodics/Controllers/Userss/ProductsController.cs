@@ -1,207 +1,207 @@
-﻿using Foodics.Dtos.Admin.Product;
-using Foodics.Dtos.Userproduct;
-using Foodics.Models;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using POSSystem.Data;
+﻿//using Foodics.Dtos.Admin.Product;
+//using Foodics.Dtos.Userproduct;
+//using Foodics.Models;
+//using Microsoft.AspNetCore.Authorization;
+//using Microsoft.AspNetCore.Mvc;
+//using Microsoft.EntityFrameworkCore;
+//using POSSystem.Data;
 
-namespace Foodics.Controllers
-{
-    [ApiController]
-    [Route("api/products")]
-    public class ProductsController : ControllerBase
-    {
-        private readonly ApplicationDbContext _context;
+//namespace Foodics.Controllers
+//{
+//    [ApiController]
+//    [Route("api/products")]
+//    public class ProductsController : ControllerBase
+//    {
+//        private readonly ApplicationDbContext _context;
 
-        public ProductsController(ApplicationDbContext context)
-        {
-            _context = context;
-        }
-
-
-        private bool IsDiscountActive(Product product)
-        {
-            if (!product.DiscountPercentage.HasValue ||
-                !product.DiscountStart.HasValue ||
-                !product.DiscountEnd.HasValue)
-                return false;
-
-            var now = DateTime.UtcNow.AddHours(3);
-            var start = product.DiscountStart.Value;
-            var end = product.DiscountEnd.Value;
-
-            // ✅ debug مؤقت
-            Console.WriteLine($"NOW: {now} | START: {start} | END: {end}");
-            Console.WriteLine($"Active: {now >= start && now <= end}");
-
-            return now >= start && now <= end;
-        }
+//        public ProductsController(ApplicationDbContext context)
+//        {
+//            _context = context;
+//        }
 
 
-        [HttpGet]
-        public async Task<IActionResult> GetProducts()
-        {
-            var products = await _context.Products
-      .Where(p => !p.IsDeleted)
-      .Include(p => p.Category)
-      .Include(p => p.Sizes)
-      .Include(p => p.ModifierGroups)
-          .ThenInclude(g => g.Options)
-      .ToListAsync();
+//        private bool IsDiscountActive(Product product)
+//        {
+//            if (!product.DiscountPercentage.HasValue ||
+//                !product.DiscountStart.HasValue ||
+//                !product.DiscountEnd.HasValue)
+//                return false;
 
-            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+//            var now = DateTime.UtcNow.AddHours(3);
+//            var start = product.DiscountStart.Value;
+//            var end = product.DiscountEnd.Value;
 
-            var result = products.Select(product =>
-            {
-                var isDiscountActive = IsDiscountActive(product);
+//            // ✅ debug مؤقت
+//            Console.WriteLine($"NOW: {now} | START: {start} | END: {end}");
+//            Console.WriteLine($"Active: {now >= start && now <= end}");
 
-                return new ProductResponseDto
-                {
-                    Id = product.Id,
-                    Name = product.Name,
-                    Description = product.Description,
-                    Price = product.Price,
-                    Calories = product.Calories,
-                    PointsReward = product.PointsReward,
-                    ImageUrl = string.IsNullOrEmpty(product.ImageUrl) ? null : $"{baseUrl}{product.ImageUrl}",
-                    IsAvailable = product.IsAvailable,
-                    CategoryName = product.Category?.Name,
+//            return now >= start && now <= end;
+//        }
 
-                    Sizes = product.Sizes.Select(s => new ProductSizeDto
-                    {
-                        Id = s.Id,
-                        Name = s.Name,
-                        Price = s.Price,
-                        IsDefault = s.IsDefault
-                    }).ToList(),
 
-                    ModifierGroups = product.ModifierGroups?.Select(g => new ModifierGroupDto
-                    {
-                        Id = g.Id,
-                        Name = g.Name,
-                        IsRequired = g.IsRequired,
-                        MaxSelections = g.MaxSelections,
-                        Options = g.Options.Select(o => new ModifierOptionDto
-                        {
-                            Id = o.Id,
-                            Name = o.Name,
-                            ExtraPrice = o.ExtraPrice
-                        }).ToList()
-                    }).ToList(),
+//        [HttpGet]
+//        public async Task<IActionResult> GetProducts()
+//        {
+//            var products = await _context.Products
+//      .Where(p => !p.IsDeleted)
+//      .Include(p => p.Category)
+//      .Include(p => p.Sizes)
+//      .Include(p => p.ModifierGroups)
+//          .ThenInclude(g => g.Options)
+//      .ToListAsync();
 
-                    DiscountedPrice = isDiscountActive ? CalculateDiscountedPrice(product) : null,
-                    DiscountPercentage = isDiscountActive ? product.DiscountPercentage : null,
-                    DiscountStart = product.DiscountStart,
-                    DiscountEnd = product.DiscountEnd
-                };
-            });
+//            var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
-            return Ok(result);
-        }
+//            var result = products.Select(product =>
+//            {
+//                var isDiscountActive = IsDiscountActive(product);
 
-        //[HttpGet]
-        //[AllowAnonymous]
-        //public async Task<IActionResult> GetProducts()
-        //{
-        //    var baseUrl = $"{Request.Scheme}://{Request.Host}";
+//                return new ProductResponseDto
+//                {
+//                    Id = product.Id,
+//                    Name = product.Name,
+//                    Description = product.Description,
+//                    Price = product.Price,
+//                    Calories = product.Calories,
+//                    PointsReward = product.PointsReward,
+//                    ImageUrl = string.IsNullOrEmpty(product.ImageUrl) ? null : $"{baseUrl}{product.ImageUrl}",
+//                    IsAvailable = product.IsAvailable,
+//                    CategoryName = product.Category?.Name,
 
-        //    var products = await _context.Products
-        //        .Where(p => p.IsAvailable)
-        //        .Include(p => p.Category)
-        //        .Include(p => p.Sizes)
-        //        .Include(p => p.ModifierGroups)
-        //            .ThenInclude(g => g.Options)
-        //        .ToListAsync();
+//                    Sizes = product.Sizes.Select(s => new ProductSizeDto
+//                    {
+//                        Id = s.Id,
+//                        Name = s.Name,
+//                        Price = s.Price,
+//                        IsDefault = s.IsDefault
+//                    }).ToList(),
 
-        //    var result = products.Select(product => new ProductResponseDto
-        //    {
-        //        Id = product.Id,
-        //        Name = product.Name,
-        //        Description = product.Description,
-        //        Price = product.Price,
+//                    ModifierGroups = product.ModifierGroups?.Select(g => new ModifierGroupDto
+//                    {
+//                        Id = g.Id,
+//                        Name = g.Name,
+//                        IsRequired = g.IsRequired,
+//                        MaxSelections = g.MaxSelections,
+//                        Options = g.Options.Select(o => new ModifierOptionDto
+//                        {
+//                            Id = o.Id,
+//                            Name = o.Name,
+//                            ExtraPrice = o.ExtraPrice
+//                        }).ToList()
+//                    }).ToList(),
 
-        //        // 🔥 Discount Info
-        //        DiscountPercentage = product.DiscountPercentage,
-        //        DiscountStart = product.DiscountStart,
-        //        DiscountEnd = product.DiscountEnd,
+//                    DiscountedPrice = isDiscountActive ? CalculateDiscountedPrice(product) : null,
+//                    DiscountPercentage = isDiscountActive ? product.DiscountPercentage : null,
+//                    DiscountStart = product.DiscountStart,
+//                    DiscountEnd = product.DiscountEnd
+//                };
+//            });
 
-        //        DiscountedPrice = CalculateDiscountedPrice(product),
+//            return Ok(result);
+//        }
 
-        //        Calories = product.Calories,
-        //        PointsReward = product.PointsReward,
+//        //[HttpGet]
+//        //[AllowAnonymous]
+//        //public async Task<IActionResult> GetProducts()
+//        //{
+//        //    var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
-        //        ImageUrl = string.IsNullOrEmpty(product.ImageUrl)
-        //            ? null
-        //            : $"{baseUrl}{product.ImageUrl}",
+//        //    var products = await _context.Products
+//        //        .Where(p => p.IsAvailable)
+//        //        .Include(p => p.Category)
+//        //        .Include(p => p.Sizes)
+//        //        .Include(p => p.ModifierGroups)
+//        //            .ThenInclude(g => g.Options)
+//        //        .ToListAsync();
 
-        //        CategoryName = product.Category?.Name,
+//        //    var result = products.Select(product => new ProductResponseDto
+//        //    {
+//        //        Id = product.Id,
+//        //        Name = product.Name,
+//        //        Description = product.Description,
+//        //        Price = product.Price,
 
-        //        Sizes = product.Sizes.Select(s => new ProductSizeDto
-        //        {
-        //            Id = s.Id,
-        //            Name = s.Name,
-        //            Price = s.Price,
-        //            IsDefault = s.IsDefault
-        //        }).ToList(),
+//        //        // 🔥 Discount Info
+//        //        DiscountPercentage = product.DiscountPercentage,
+//        //        DiscountStart = product.DiscountStart,
+//        //        DiscountEnd = product.DiscountEnd,
 
-        //        ModifierGroups = product.ModifierGroups.Select(g => new ModifierGroupDto
-        //        {
-        //            Id = g.Id,
-        //            Name = g.Name,
-        //            IsRequired = g.IsRequired,
-        //            MaxSelections = g.MaxSelections,
-        //            Options = g.Options.Select(o => new ModifierOptionDto
-        //            {
-        //                Id = o.Id,
-        //                Name = o.Name,
-        //                ExtraPrice = o.ExtraPrice
-        //            }).ToList()
-        //        }).ToList()
-        //    });
+//        //        DiscountedPrice = CalculateDiscountedPrice(product),
 
-        //    return Ok(result);
-        //}
+//        //        Calories = product.Calories,
+//        //        PointsReward = product.PointsReward,
 
-        // 🔹 Get products grouped by category (Menu)
-        [HttpGet("menu")]
-        public async Task<IActionResult> GetMenu()
-        {
-            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+//        //        ImageUrl = string.IsNullOrEmpty(product.ImageUrl)
+//        //            ? null
+//        //            : $"{baseUrl}{product.ImageUrl}",
 
-            var data = await _context.Categories
-                .Include(c => c.Products
-    .Where(p => p.IsAvailable && !p.IsDeleted))
-                .Select(c => new
-                {
-                    categoryId = c.Id,
-                    categoryName = c.Name,
+//        //        CategoryName = product.Category?.Name,
 
-                    products = c.Products.Select(p => new ProductListDto
-                    {
-                        Id = p.Id,
-                        Name = p.Name,
-                        Price = p.Price,
-                        DiscountedPrice = CalculateDiscountedPrice(p),
-                        ImageUrl = string.IsNullOrEmpty(p.ImageUrl)
-                            ? null
-                            : $"{baseUrl}{p.ImageUrl}"
-                    }).ToList()
-                })
-                .ToListAsync();
+//        //        Sizes = product.Sizes.Select(s => new ProductSizeDto
+//        //        {
+//        //            Id = s.Id,
+//        //            Name = s.Name,
+//        //            Price = s.Price,
+//        //            IsDefault = s.IsDefault
+//        //        }).ToList(),
 
-            return Ok(data);
-        }
+//        //        ModifierGroups = product.ModifierGroups.Select(g => new ModifierGroupDto
+//        //        {
+//        //            Id = g.Id,
+//        //            Name = g.Name,
+//        //            IsRequired = g.IsRequired,
+//        //            MaxSelections = g.MaxSelections,
+//        //            Options = g.Options.Select(o => new ModifierOptionDto
+//        //            {
+//        //                Id = o.Id,
+//        //                Name = o.Name,
+//        //                ExtraPrice = o.ExtraPrice
+//        //            }).ToList()
+//        //        }).ToList()
+//        //    });
 
-        // 🔹 Discount logic
-        private decimal CalculateDiscountedPrice(Product product)
-        {
-            if (product.DiscountPercentage.HasValue)
-            {
-                return product.Price - (product.Price * product.DiscountPercentage.Value / 100);
-            }
+//        //    return Ok(result);
+//        //}
 
-            return product.Price;
-        }
-    }
-}
+//        // 🔹 Get products grouped by category (Menu)
+//        [HttpGet("menu")]
+//        public async Task<IActionResult> GetMenu()
+//        {
+//            var baseUrl = $"{Request.Scheme}://{Request.Host}";
+
+//            var data = await _context.Categories
+//                .Include(c => c.Products
+//    .Where(p => p.IsAvailable && !p.IsDeleted))
+//                .Select(c => new
+//                {
+//                    categoryId = c.Id,
+//                    categoryName = c.Name,
+
+//                    products = c.Products.Select(p => new ProductListDto
+//                    {
+//                        Id = p.Id,
+//                        Name = p.Name,
+//                        Price = p.Price,
+//                        DiscountedPrice = CalculateDiscountedPrice(p),
+//                        ImageUrl = string.IsNullOrEmpty(p.ImageUrl)
+//                            ? null
+//                            : $"{baseUrl}{p.ImageUrl}"
+//                    }).ToList()
+//                })
+//                .ToListAsync();
+
+//            return Ok(data);
+//        }
+
+//        // 🔹 Discount logic
+//        private decimal CalculateDiscountedPrice(Product product)
+//        {
+//            if (product.DiscountPercentage.HasValue)
+//            {
+//                return product.Price - (product.Price * product.DiscountPercentage.Value / 100);
+//            }
+
+//            return product.Price;
+//        }
+//    }
+//}

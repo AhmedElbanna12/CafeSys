@@ -18,7 +18,11 @@ namespace Foodics.Models
         public int ProductId { get; set; }
         public Product Product { get; set; }
 
-        public string ProductName { get; set; } // snapshot
+      //  public string ProductName { get; set; } // snapshot
+
+        // Snapshot (Localized)
+        public string ProductNameAr { get; set; } = string.Empty;
+        public string ProductNameEn { get; set; } = string.Empty;
 
         public int? ProductSizeId { get; set; }
         public ProductSize? ProductSize { get; set; }

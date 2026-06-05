@@ -1,4 +1,5 @@
 ﻿using Foodics.Dtos.Adv;
+using Foodics.ExtensionMethod;
 using Foodics.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -21,20 +22,56 @@ namespace Foodics.Controllers
             _env = env;
         }
 
-        // GET: api/Ads
+        //// GET: api/Ads
+        //[HttpGet]
+        //public async Task<IActionResult> GetAds()
+        //{
+        //    var ads = await _context.Advertisements
+        //        .Where(a => a.IsActive)
+        //        .OrderByDescending(a => a.CreatedAt)
+        //        .Select(a => new AdDto
+        //        {
+        //            Id = a.Id,
+        //            Title = a.Title,
+        //            Description = a.Description,
+        //            // full URL for image
+        //            ImageUrl = $"{Request.Scheme}://{Request.Host}/images/uploadsadv/{Path.GetFileName(a.ImagePath)}",
+        //            CreatedAt = a.CreatedAt
+        //        })
+        //        .ToListAsync();
+
+        //    return Ok(ads);
+        //}
+
+
         [HttpGet]
         public async Task<IActionResult> GetAds()
         {
+            var lang = Request.Headers["Accept-Language"]
+                .ToString()
+                .StartsWith("ar")
+                ? "ar"
+                : "en";
+
             var ads = await _context.Advertisements
                 .Where(a => a.IsActive)
                 .OrderByDescending(a => a.CreatedAt)
                 .Select(a => new AdDto
                 {
                     Id = a.Id,
-                    Title = a.Title,
-                    Description = a.Description,
-                    // full URL for image
+
+                    Title = LocalizationExtensions.Localize(
+                        a.TitleAr ?? a.Title,
+                        a.TitleEn ?? a.Title,
+                        lang),
+
+                    Description = LocalizationExtensions.Localize(
+                        a.DescriptionAr ?? a.Description,
+                        a.DescriptionEn ?? a.Description,
+                        lang),
+
                     ImageUrl = $"{Request.Scheme}://{Request.Host}/images/uploadsadv/{Path.GetFileName(a.ImagePath)}",
+
                     CreatedAt = a.CreatedAt
                 })
                 .ToListAsync();
@@ -67,8 +104,19 @@ namespace Foodics.Controllers
             // إنشاء الإعلان
             var ad = new Advertisement
             {
-                Title = dto.Title,
-                Description = dto.Description,
+                //Title = dto.Title,
+                //Description = dto.Description,
+
+                // Legacy columns
+                Title = dto.TitleEn,
+                Description = dto.DescriptionEn,
+
+                // Localized columns
+                TitleAr = dto.TitleAr,
+                TitleEn = dto.TitleEn,
+                DescriptionAr = dto.DescriptionAr,
+                DescriptionEn = dto.DescriptionEn,
+
                 ImagePath = filePath
             };
 
@@ -97,12 +145,34 @@ namespace Foodics.Controllers
             if (ad == null)
                 return NotFound("Ad not found");
 
-            // تحديث البيانات الأساسية
-            if (!string.IsNullOrEmpty(dto.Title))
-                ad.Title = dto.Title;
+            //// تحديث البيانات الأساسية
+            //if (!string.IsNullOrEmpty(dto.Title))
+            //    ad.Title = dto.Title;
 
-            if (!string.IsNullOrEmpty(dto.Description))
-                ad.Description = dto.Description;
+            //if (!string.IsNullOrEmpty(dto.Description))
+            //    ad.Description = dto.Description;
+
+            if (!string.IsNullOrWhiteSpace(dto.TitleAr))
+                ad.TitleAr = dto.TitleAr;
+
+            if (!string.IsNullOrWhiteSpace(dto.TitleEn))
+            {
+                ad.TitleEn = dto.TitleEn;
+
+                // Legacy
+                ad.Title = dto.TitleEn;
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto.DescriptionAr))
+                ad.DescriptionAr = dto.DescriptionAr;
+
+            if (!string.IsNullOrWhiteSpace(dto.DescriptionEn))
+            {
+                ad.DescriptionEn = dto.DescriptionEn;
+
+                // Legacy
+                ad.Description = dto.DescriptionEn;
+            }
 
             // لو في صورة جديدة
             if (dto.Image != null && dto.Image.Length > 0)

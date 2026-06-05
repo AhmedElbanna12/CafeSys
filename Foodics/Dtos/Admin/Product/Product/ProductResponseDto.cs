@@ -1,4 +1,7 @@
-﻿namespace Foodics.Dtos.Admin.Product
+﻿using Foodics.Dtos.Admin.Product.ProductModifierGroup;
+using Foodics.Dtos.Admin.Product.ProductSize;
+
+namespace Foodics.Dtos.Admin.Product.Product
 {
     public class ProductResponseDto
     {

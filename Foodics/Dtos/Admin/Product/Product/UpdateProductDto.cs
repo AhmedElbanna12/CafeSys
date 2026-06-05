@@ -1,12 +1,13 @@
-﻿namespace Foodics.Dtos.Admin.Product
+﻿namespace Foodics.Dtos.Admin.Product.Product
 {
     public class UpdateProductDto
     {
-        public string ? Name { get; set; }
+      
+        public string? NameAr { get; set; }
+        public string? NameEn { get; set; }
 
-        public string ?Description { get; set; }
-
-
+        public string? DescriptionAr { get; set; }
+        public string? DescriptionEn { get; set; }
         public decimal? DiscountPercentage { get; set; }
         public DateTime? DiscountStart { get; set; }
         public DateTime? DiscountEnd { get; set; }

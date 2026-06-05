@@ -1,4 +1,4 @@
-﻿namespace Foodics.Dtos.Admin.Product
+﻿namespace Foodics.Dtos.Admin.Product.ProductModifierOption
 {
     public class ModifierOptionDto
     {

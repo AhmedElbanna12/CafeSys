@@ -10,6 +10,9 @@ namespace Foodics.Models
 
         public string Name { get; set; }
 
+        public string? NameAr { get; set; }
+        public string? NameEn { get; set; }
+
         public decimal Price { get; set; }
 
         public bool IsDefault { get; set; }

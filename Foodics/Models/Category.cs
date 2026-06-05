@@ -7,7 +7,14 @@ namespace Foodics.Models
         [Key]
         public int Id { get; set; }
         public string Name { get; set; }
-        public string Description { get; set; }
+
+        public string? NameAr { get; set; }
+        public string? NameEn { get; set; }
+
+        public string Description { get; set; } = string.Empty;
+
+        public string? DescriptionAr { get; set; }
+        public string? DescriptionEn { get; set; }
         public bool IsActive { get; set; } = true;
 
         public ICollection<Product> Products { get; set; }
