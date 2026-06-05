@@ -5,7 +5,10 @@ namespace Foodics.Dtos.Admin.Rewards
     public class CreateRewardDto
     {
         [Required]
-        public string Name { get; set; }
+        public string NameAr { get; set; } = string.Empty;
+
+        [Required]
+        public string NameEn { get; set; } = string.Empty;
 
         [Required]
         public int PointsRequired { get; set; }

@@ -1,10 +1,18 @@
-﻿namespace Foodics.Dtos.Admin.Product.ProductSize
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace Foodics.Dtos.Admin.Product.ProductSize
 {
     public class CreateSizeDto
     {
-        public string? NameAr { get; set; }
-        public string? NameEn { get; set; }
+        [Required]
+        public string NameAr { get; set; } = string.Empty;
+
+        [Required]
+        public string NameEn { get; set; } = string.Empty;
+
+        [Required]
         public decimal Price { get; set; }
+
         public bool IsDefault { get; set; }
 
     }

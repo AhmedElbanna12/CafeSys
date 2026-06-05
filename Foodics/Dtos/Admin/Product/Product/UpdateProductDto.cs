@@ -3,6 +3,7 @@
     public class UpdateProductDto
     {
       
+
         public string? NameAr { get; set; }
         public string? NameEn { get; set; }
 
