@@ -5,6 +5,11 @@ namespace Foodics.Dtos.Admin.Product.Product
     public class CreateProductDto
     {
 
+
+        public String? Name { get; set; }
+        public string? Description{ get; set; }
+
+
         [Required]
 
         public string? NameAr { get; set; }

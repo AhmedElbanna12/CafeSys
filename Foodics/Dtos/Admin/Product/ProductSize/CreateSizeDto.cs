@@ -4,6 +4,9 @@ namespace Foodics.Dtos.Admin.Product.ProductSize
 {
     public class CreateSizeDto
     {
+
+        public String Name { get; set; }
+
         [Required]
         public string NameAr { get; set; } = string.Empty;
 
