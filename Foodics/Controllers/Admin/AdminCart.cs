@@ -61,3 +61,80 @@
 //        }
 //    }
 //}
+
+
+using Foodics.Dtos.Cart.Cart;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using POSSystem.Data;
+
+namespace Foodics.Controllers.Admin
+{
+    [Route("api/[controller]")]
+    [ApiController]
+    [Authorize(Roles = "Admin")]
+    public class AdminCart : ControllerBase
+    {
+        private readonly ApplicationDbContext _context;
+
+        public AdminCart(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAllCarts()
+        {
+            var carts = await _context.Carts
+                .Include(c => c.Items)
+                    .ThenInclude(i => i.Product)
+                .Include(c => c.Items)
+                    .ThenInclude(i => i.ProductSize)
+                .Include(c => c.Items)
+                    .ThenInclude(i => i.Modifiers)
+                        .ThenInclude(m => m.ModifierOption)
+                .ToListAsync();
+
+            var cartDtos = carts.Select(c => new
+            {
+                c.Id,
+                c.UserId,
+                c.SubTotal,
+                c.Discount,
+                c.Total,
+                c.PromoCode,
+
+                Items = c.Items.Select(i => new
+                {
+                    i.Id,
+                    i.ProductId,
+
+                    ProductNameAr = i.Product?.NameAr,
+                    ProductNameEn = i.Product?.NameEn,
+
+                    i.Price,
+                    i.Quantity,
+
+                    i.ProductSizeId,
+
+                    ProductSizeNameAr = i.ProductSize?.NameAr,
+                    ProductSizeNameEn = i.ProductSize?.NameEn,
+
+                    Modifiers = i.Modifiers.Select(m => new
+                    {
+                        m.Id,
+                        m.ModifierOptionId,
+
+                        ModifierOptionNameAr = m.ModifierOption?.NameAr,
+                        ModifierOptionNameEn = m.ModifierOption?.NameEn,
+
+                        m.Price
+                    })
+                })
+            });
+
+            return Ok(cartDtos);
+        }
+    }
+}

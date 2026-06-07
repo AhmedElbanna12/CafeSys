@@ -10,7 +10,7 @@ namespace Foodics.Controllers.Admin
 {
     [Route("api/admin/products/{productId}/sizes")]
     [ApiController]
-   // [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class AdminProductSizesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

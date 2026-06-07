@@ -10,7 +10,7 @@ namespace Foodics.Controllers.Admin
 {
     [Route("api/admin/modifier-groups/{groupId}/options")]
     [ApiController]
-    //[Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin")]
     public class ModifierOptionsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
