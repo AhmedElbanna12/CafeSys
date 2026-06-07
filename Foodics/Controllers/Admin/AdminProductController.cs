@@ -820,52 +820,6 @@
 //        }
 
 
-//        /// <summary>
-//        /// Get Top Selling Products
-//        /// </summary>
-//        /// <param name="count">Number of products to return (default = 10)</param>
-//        /// <param name="days">Filter by last X days (optional)</param>
-//        [HttpGet("top-selling")]
-//        public async Task<IActionResult> GetTopSellingProducts(int count = 10, int? days = null)
-//        {
-//            var query = _context.OrderItems
-//                .Include(oi => oi.Order)
-//                .AsQueryable();
-
-//            // ✅ فلترة بالتاريخ (اختياري)
-//            if (days.HasValue)
-//            {
-//                var fromDate = DateTime.UtcNow.AddDays(-days.Value);
-//                query = query.Where(oi => oi.Order.CreatedAt >= fromDate);
-//            }
-
-//            var topProducts = await query
-//                .GroupBy(oi => oi.ProductId)
-//                .Select(g => new
-//                {
-//                    ProductId = g.Key,
-//                    TotalSold = g.Sum(x => x.Quantity)
-//                })
-//                .OrderByDescending(x => x.TotalSold)
-//                .Take(count)
-//                .Join(_context.Products,
-//                      g => g.ProductId,
-//                      p => p.Id,
-//                      (g, p) => new TopSellingProductDto
-//                      {
-//                          Id = p.Id,
-//                          Name = p.Name,
-//                          Price = p.Price,
-//                          ImageUrl = p.ImageUrl,
-//                          TotalSold = g.TotalSold
-//                      })
-//                .ToListAsync();
-
-//            return Ok(topProducts);
-//        }
-
-
-
 //        [Authorize(Roles = "Admin")]
 //        [HttpDelete("sizes/{sizeId}")]
 //        public async Task<IActionResult> DeleteSize(int sizeId)
@@ -975,6 +929,7 @@
 
 
 using Foodics.Dtos.Admin.Product.Product;
+using Foodics.ExtensionMethod;
 using Foodics.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -1174,6 +1129,116 @@ namespace Foodics.Controllers.Admin
                 product.IsAvailable
             });
         }
+
+        ///// <summary>
+        ///// Get Top Selling Products
+        ///// </summary>
+        ///// <param name="count">Number of products to return (default = 10)</param>
+        ///// <param name="days">Filter by last X days (optional)</param>
+        //[HttpGet("top-selling")]
+        //public async Task<IActionResult> GetTopSellingProducts(int count = 10, int? days = null)
+        //{
+        //    var query = _context.OrderItems
+        //        .Include(oi => oi.Order)
+        //        .AsQueryable();
+
+        //    // ✅ فلترة بالتاريخ (اختياري)
+        //    if (days.HasValue)
+        //    {
+        //        var fromDate = DateTime.UtcNow.AddDays(-days.Value);
+        //        query = query.Where(oi => oi.Order.CreatedAt >= fromDate);
+        //    }
+
+        //    var topProducts = await query
+        //        .GroupBy(oi => oi.ProductId)
+        //        .Select(g => new
+        //        {
+        //            ProductId = g.Key,
+        //            TotalSold = g.Sum(x => x.Quantity)
+        //        })
+        //        .OrderByDescending(x => x.TotalSold)
+        //        .Take(count)
+        //        .Join(_context.Products,
+        //              g => g.ProductId,
+        //              p => p.Id,
+        //              (g, p) => new Dtos.Admin.Product.TopSellingProductDto
+        //              {
+        //                  Id = p.Id,
+        //                  Name = p.Name,
+        //                  Price = p.Price,
+        //                  ImageUrl = p.ImageUrl,
+        //                  TotalSold = g.TotalSold
+        //              })
+        //        .ToListAsync();
+
+        //    return Ok(topProducts);
+        //}
+
+
+        /// <summary>
+        /// Get Top Selling Products
+        /// </summary>
+        [HttpGet("top-selling")]
+        public async Task<IActionResult> GetTopSellingProducts(
+            int count = 10,
+            int? days = null)
+        {
+            // 🌍 تحديد اللغة من الهيدر
+            var lang = Request.Headers["Accept-Language"].ToString();
+
+            var query = _context.OrderItems
+                .Include(oi => oi.Order)
+                .Include(oi => oi.Product)
+                .AsNoTracking()
+                .AsQueryable();
+
+            // 📅 فلترة اختيارية بالوقت
+            if (days.HasValue)
+            {
+                var fromDate = DateTime.UtcNow.AddDays(-days.Value);
+                query = query.Where(oi => oi.Order.CreatedAt >= fromDate);
+            }
+
+            var topProducts = await query
+                .GroupBy(oi => new
+                {
+                    oi.ProductId,
+                    oi.Product.NameAr,
+                    oi.Product.NameEn,
+                    oi.Product.Price,
+                    oi.Product.ImageUrl
+                })
+                .Select(g => new
+                {
+                    ProductId = g.Key.ProductId,
+                    NameAr = g.Key.NameAr,
+                    NameEn = g.Key.NameEn,
+                    Price = g.Key.Price,
+                    ImageUrl = g.Key.ImageUrl,
+                    TotalSold = g.Sum(x => x.Quantity)
+                })
+                .OrderByDescending(x => x.TotalSold)
+                .Take(count)
+                .ToListAsync();
+
+            // 🌍 Apply localization in memory using your extension
+            var result = topProducts.Select(p => new Dtos.Admin.Product.TopSellingProductDto
+            {
+                Id = p.ProductId,
+
+                Name = LocalizationExtensions.Localize(
+                    p.NameAr,
+                    p.NameEn,
+                    lang),
+
+                Price = p.Price,
+                ImageUrl = p.ImageUrl,
+                TotalSold = p.TotalSold
+            });
+
+            return Ok(result);
+        }
+
 
         // =========================
         // MAPPER

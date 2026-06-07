@@ -391,7 +391,7 @@ namespace Foodics.Controllers
 
             return Ok(data);
         }
-
+    
         // 🔹 Discount logic
         private decimal CalculateDiscountedPrice(Product product)
         {
