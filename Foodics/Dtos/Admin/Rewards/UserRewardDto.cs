@@ -1,12 +1,10 @@
 ﻿namespace Foodics.Dtos.Admin.Rewards
 {
-    public class RewardResponseDto
+    public class UserRewardDto
     {
         public int Id { get; set; }
 
-        public string? NameAr { get; set; }
-
-        public string? NameEn { get; set; }
+        public string Name { get; set; } = string.Empty;
 
         public int PointsRequired { get; set; }
 

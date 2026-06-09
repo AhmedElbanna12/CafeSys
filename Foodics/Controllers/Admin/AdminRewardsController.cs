@@ -1,4 +1,5 @@
 ﻿using Foodics.Dtos.Admin.Rewards;
+using Foodics.ExtensionMethod;
 using Foodics.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,16 +22,63 @@ namespace Foodics.Controllers.Admin
         }
 
 
+        private string GetLang()
+        {
+            var langHeader = Request.Headers["Accept-Language"].ToString();
+
+            return langHeader
+                .Split(',')[0]
+                .Trim()
+                .ToLower()
+                .StartsWith("ar")
+                ? "ar"
+                : "en";
+        }
+
+
+        //[Authorize(Roles = "Admin")]
+        //// Create Reward
+        //[HttpPost]
+        //public async Task<IActionResult> CreateReward(CreateRewardDto dto)
+        //{
+        //    var reward = new Reward
+        //    {
+        //        NameAr = dto.NameAr,
+        //        NameEn = dto.NameEn,
+
+        //        PointsRequired = dto.PointsRequired,
+        //        ProductId = dto.ProductId,
+        //        IsActive = true
+        //    };
+
+        //    _context.Rewards.Add(reward);
+        //    await _context.SaveChangesAsync();
+
+        //    // 🔹 Load Product navigation property
+        //    var rewardWithProduct = await _context.Rewards
+        //        .Include(r => r.Product)
+        //        .FirstOrDefaultAsync(r => r.Id == reward.Id);
+
+        //    return Ok(new RewardResponseDto
+        //    {
+        //        Id = reward.Id,
+        //        Name = reward.Name,
+        //        PointsRequired = reward.PointsRequired,
+        //        ProductId = reward.ProductId,
+        //        IsActive = reward.IsActive
+        //    });
+        //}
+
+
         [Authorize(Roles = "Admin")]
-        // Create Reward
         [HttpPost]
         public async Task<IActionResult> CreateReward(CreateRewardDto dto)
         {
             var reward = new Reward
             {
+                Name   = dto.Name,
                 NameAr = dto.NameAr,
                 NameEn = dto.NameEn,
-
                 PointsRequired = dto.PointsRequired,
                 ProductId = dto.ProductId,
                 IsActive = true
@@ -39,15 +87,12 @@ namespace Foodics.Controllers.Admin
             _context.Rewards.Add(reward);
             await _context.SaveChangesAsync();
 
-            // 🔹 Load Product navigation property
-            var rewardWithProduct = await _context.Rewards
-                .Include(r => r.Product)
-                .FirstOrDefaultAsync(r => r.Id == reward.Id);
-
+            var lang = GetLang();
             return Ok(new RewardResponseDto
             {
                 Id = reward.Id,
-                Name = reward.Name,
+                NameAr = reward.NameAr,
+                NameEn = reward.NameEn,
                 PointsRequired = reward.PointsRequired,
                 ProductId = reward.ProductId,
                 IsActive = reward.IsActive
@@ -55,7 +100,26 @@ namespace Foodics.Controllers.Admin
         }
 
 
-        // Get All Rewards
+        //// Get All Rewards
+        //[HttpGet]
+        //public async Task<IActionResult> GetRewards()
+        //{
+        //    var rewards = await _context.Rewards.ToListAsync();
+
+        //    var result = rewards.Select(r => new RewardResponseDto
+        //    {
+        //        Id = r.Id,
+        //        Name = r.Name,
+        //        PointsRequired = r.PointsRequired,
+        //        ProductId = r.ProductId,   // بس ID
+        //        IsActive = r.IsActive
+        //    });
+
+        //    return Ok(result);
+        //}
+
+
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> GetRewards()
         {
@@ -64,17 +128,38 @@ namespace Foodics.Controllers.Admin
             var result = rewards.Select(r => new RewardResponseDto
             {
                 Id = r.Id,
-                Name = r.Name,
+                NameAr = r.NameAr,
+                NameEn = r.NameEn,
                 PointsRequired = r.PointsRequired,
-                ProductId = r.ProductId,   // بس ID
+                ProductId = r.ProductId,
                 IsActive = r.IsActive
             });
 
             return Ok(result);
         }
 
+        //// Get Reward By Id
+        //[HttpGet("{id}")]
+        //public async Task<IActionResult> GetReward(int id)
+        //{
+        //    var reward = await _context.Rewards.FindAsync(id);
 
-        // Get Reward By Id
+        //    if (reward == null)
+        //        return NotFound("Reward not found");
+
+        //    var result = new RewardResponseDto
+        //    {
+        //        Id = reward.Id,
+        //        Name = reward.Name,
+        //        PointsRequired = reward.PointsRequired,
+        //        ProductId = reward.ProductId,
+        //        IsActive = reward.IsActive
+        //    };
+
+        //    return Ok(result);
+        //}
+
+
         [HttpGet("{id}")]
         public async Task<IActionResult> GetReward(int id)
         {
@@ -83,20 +168,58 @@ namespace Foodics.Controllers.Admin
             if (reward == null)
                 return NotFound("Reward not found");
 
-            var result = new RewardResponseDto
+            return Ok(new RewardResponseDto
             {
                 Id = reward.Id,
-                Name = reward.Name,
+                NameAr = reward.NameAr,
+                NameEn = reward.NameEn,
                 PointsRequired = reward.PointsRequired,
                 ProductId = reward.ProductId,
                 IsActive = reward.IsActive
-            };
-
-            return Ok(result);
+            });
         }
 
+        //[Authorize(Roles = "Admin")]
+        //// Update Reward
+        //[HttpPut("{id}")]
+        //public async Task<IActionResult> UpdateReward(int id, UpdateRewardDto dto)
+        //{
+        //    var reward = await _context.Rewards.FindAsync(id);
+
+        //    if (reward == null)
+        //        return NotFound("Reward not found");
+
+        //    if (dto.NameAr != null)
+        //        reward.NameAr = dto.NameAr;
+
+        //    if (dto.NameEn != null)
+        //        reward.NameEn = dto.NameEn;
+
+        //    if (dto.PointsRequired.HasValue)
+        //        reward.PointsRequired = dto.PointsRequired.Value;
+
+        //    if (dto.ProductId.HasValue)
+        //        reward.ProductId = dto.ProductId.Value;
+
+        //    if (dto.IsActive.HasValue)
+        //        reward.IsActive = dto.IsActive.Value;
+
+        //    await _context.SaveChangesAsync();
+
+        //    var result = new RewardResponseDto
+        //    {
+        //        Id = reward.Id,
+        //        Name = reward.Name,
+        //        PointsRequired = reward.PointsRequired,
+        //        ProductId = reward.ProductId,
+        //        IsActive = reward.IsActive
+        //    };
+
+        //    return Ok(result);
+        //}
+
+
         [Authorize(Roles = "Admin")]
-        // Update Reward
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateReward(int id, UpdateRewardDto dto)
         {
@@ -122,18 +245,44 @@ namespace Foodics.Controllers.Admin
 
             await _context.SaveChangesAsync();
 
-            var result = new RewardResponseDto
+            var lang = GetLang();
+
+            return Ok(new RewardResponseDto
             {
                 Id = reward.Id,
-                Name = reward.Name,
+                NameAr = reward.NameAr,
+                NameEn = reward.NameEn,
                 PointsRequired = reward.PointsRequired,
                 ProductId = reward.ProductId,
                 IsActive = reward.IsActive
-            };
+            });
+        }
+
+        [HttpGet("/api/rewards")]
+        public async Task<IActionResult> GetUserRewards()
+        {
+            var lang = GetLang();
+
+            var rewards = await _context.Rewards
+                .Where(r => r.IsActive)
+                .ToListAsync();
+
+            var result = rewards.Select(r => new UserRewardDto
+            {
+                Id = r.Id,
+
+                Name = LocalizationExtensions.Localize(
+                    r.NameAr,
+                    r.NameEn,
+                    lang),
+
+                PointsRequired = r.PointsRequired,
+                ProductId = r.ProductId,
+                IsActive = r.IsActive
+            });
 
             return Ok(result);
         }
-
 
         [Authorize(Roles = "Admin")]
         // Toggle Reward
@@ -283,11 +432,13 @@ namespace Foodics.Controllers.Admin
         }
 
 
-        // GET: api/admin/redeemed-rewards
+        // GET: api/admin/rewards/redeemed-rewards
         [HttpGet("redeemed-rewards")]
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> GetAllRedeemedRewards()
         {
+            var lang = GetLang();
+
             var redeemedRewards = await _context.RedeemedRewards
                 .Include(r => r.User)
                 .Include(r => r.Reward)
@@ -307,7 +458,12 @@ namespace Foodics.Controllers.Admin
                     reward = new
                     {
                         id = r.RewardId,
-                        name = r.Reward.Name,
+
+                        name = LocalizationExtensions.Localize(
+                            r.Reward.NameAr,
+                            r.Reward.NameEn,
+                            lang),
+
                         pointsRequired = r.Reward.PointsRequired
                     },
 
@@ -319,7 +475,7 @@ namespace Foodics.Controllers.Admin
                         usedAt = r.UsedAt
                     },
 
-                    createdAt = r.CreatedAt // لو مش عندك ضيفه 👇
+                    createdAt = r.CreatedAt
                 })
                 .ToListAsync();
 
