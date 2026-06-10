@@ -1,5 +1,6 @@
 ﻿using FirebaseAdmin;
 using Foodics.Dtos.Admin.notification;
+using Foodics.ExtensionMethod;
 using Foodics.Hub;
 using Foodics.Models;
 using Foodics.Services;
@@ -26,6 +27,20 @@ public class NotificationsController : ControllerBase
         _context = context;
         _hub = hub;
         _fcmService = fcmService;
+    }
+
+
+    private string GetLang()
+    {
+        var langHeader = Request.Headers["Accept-Language"].ToString();
+
+        return langHeader
+            .Split(',')[0]
+            .Trim()
+            .ToLower()
+            .StartsWith("ar")
+            ? "ar"
+            : "en";
     }
 
     // =====================
@@ -68,21 +83,26 @@ public class NotificationsController : ControllerBase
 
     //    return Ok("Notification sent to all users");
     //}
-
     [Authorize(Roles = "Admin")]
     [HttpPost("send-to-all")]
-    public async Task<IActionResult> SendToAll([FromBody] NotificationDto dto)
+    public async Task<IActionResult> SendToAll([FromBody] CreateNotificationDto dto)
     {
         var users = await _context.Users.ToListAsync();
+
         foreach (var user in users)
         {
             _context.Notifications.Add(new Notification
             {
                 UserId = user.Id,
-                Title = dto.Title,
-                Body = dto.Body
+
+                TitleAr = dto.TitleAr,
+                TitleEn = dto.TitleEn,
+
+                BodyAr = dto.BodyAr,
+                BodyEn = dto.BodyEn
             });
         }
+
         await _context.SaveChangesAsync();
 
         var tokens = await _context.UserDevices
@@ -90,17 +110,28 @@ public class NotificationsController : ControllerBase
             .Select(x => x.DeviceToken)
             .ToListAsync();
 
-        // ✅ لو مفيش tokens متبعتش error
         if (!tokens.Any())
             return Ok("Notifications saved. No device tokens found.");
 
         int sent = 0, failed = 0;
+
         foreach (var token in tokens)
         {
             try
             {
-                await _fcmService.SendAsync(token, dto.Title, dto.Body,
-                    new Dictionary<string, string> { { "type", "admin_message" } });
+                await _fcmService.SendAsync(
+                    token,
+                    dto.TitleEn,
+                    dto.BodyEn,
+                    new Dictionary<string, string>
+                    {
+                    { "type", "admin_message" },
+                    { "titleAr", dto.TitleAr },
+                    { "titleEn", dto.TitleEn },
+                    { "bodyAr", dto.BodyAr },
+                    { "bodyEn", dto.BodyEn }
+                    });
+
                 sent++;
             }
             catch
@@ -111,7 +142,6 @@ public class NotificationsController : ControllerBase
 
         return Ok($"Done. Sent: {sent}, Failed: {failed}");
     }
-
     // =====================
     // ارسال لمستخدم معين
     // =====================
@@ -119,21 +149,27 @@ public class NotificationsController : ControllerBase
     [HttpPost("send-to-user")]
     public async Task<IActionResult> SendToUser([FromBody] SendToUserDto dto)
     {
-        // حفظ في DB
         _context.Notifications.Add(new Notification
         {
             UserId = dto.UserId,
-            Title = dto.Title,
-            Body = dto.Body
+
+            TitleAr = dto.TitleAr,
+            TitleEn = dto.TitleEn,
+
+            BodyAr = dto.BodyAr,
+            BodyEn = dto.BodyEn
         });
 
         await _context.SaveChangesAsync();
 
-        // SignalR (لو فاتح)
         await _hub.Clients.User(dto.UserId)
-            .SendAsync("ReceiveNotification", dto.Title, dto.Body);
+            .SendAsync(
+                "ReceiveNotification",
+                dto.TitleAr,
+                dto.TitleEn,
+                dto.BodyAr,
+                dto.BodyEn);
 
-        // FCM (الأساس)
         var tokens = await _context.UserDevices
             .Where(x => x.UserId == dto.UserId)
             .Select(x => x.DeviceToken)
@@ -141,17 +177,25 @@ public class NotificationsController : ControllerBase
 
         foreach (var token in tokens)
         {
-            await _fcmService.SendAsync(token, dto.Title, dto.Body,
+            await _fcmService.SendAsync(
+                token,
+                dto.TitleEn,
+                dto.BodyEn,
                 new Dictionary<string, string>
                 {
-                    { "type", "user" },
-                    { "userId", dto.UserId }
+                { "type", "user" },
+                { "userId", dto.UserId },
+
+                { "titleAr", dto.TitleAr },
+                { "titleEn", dto.TitleEn },
+
+                { "bodyAr", dto.BodyAr },
+                { "bodyEn", dto.BodyEn }
                 });
         }
 
         return Ok("Notification sent to user");
     }
-
     // =====================
     // جلب Notifications
     // =====================
@@ -159,14 +203,25 @@ public class NotificationsController : ControllerBase
     [HttpGet("user/{userId}")]
     public async Task<IActionResult> GetUserNotifications(string userId)
     {
+        var lang = GetLang();
+
         var notifications = await _context.Notifications
             .Where(n => n.UserId == userId)
             .OrderByDescending(n => n.CreatedAt)
             .Select(n => new
             {
                 n.Id,
-                n.Title,
-                n.Body,
+
+                Title = LocalizationExtensions.Localize(
+                    n.TitleAr,
+                    n.TitleEn,
+                    lang),
+
+                Body = LocalizationExtensions.Localize(
+                    n.BodyAr,
+                    n.BodyEn,
+                    lang),
+
                 n.IsRead,
                 n.CreatedAt
             })
@@ -174,7 +229,6 @@ public class NotificationsController : ControllerBase
 
         return Ok(notifications);
     }
-
     // =====================
     // عدد الغير مقروءة
     // =====================
@@ -203,6 +257,7 @@ public class NotificationsController : ControllerBase
 
         return Ok("Marked as read");
     }
+
 
     // =====================
     // تحديد الكل كمقروءة
@@ -282,5 +337,5 @@ public class NotificationsController : ControllerBase
         await _context.SaveChangesAsync();
         return Ok();
     }
-
 }
+

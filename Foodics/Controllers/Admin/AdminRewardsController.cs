@@ -267,6 +267,7 @@ namespace Foodics.Controllers.Admin
                 .Where(r => r.IsActive)
                 .ToListAsync();
 
+
             var result = rewards.Select(r => new UserRewardDto
             {
                 Id = r.Id,
