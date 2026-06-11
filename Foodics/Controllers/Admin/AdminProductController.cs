@@ -941,6 +941,7 @@ namespace Foodics.Controllers.Admin
     [Route("api/admin/products")]
     [ApiController]
     [Authorize(Roles = "Admin")]
+
     public class AdminProductsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -954,6 +955,7 @@ namespace Foodics.Controllers.Admin
 
         // =========================
         // CREATE PRODUCT
+        
         // =========================
         [HttpPost]
         [RequestSizeLimit(10_000_000)]
@@ -1178,6 +1180,7 @@ namespace Foodics.Controllers.Admin
         /// <summary>
         /// Get Top Selling Products
         /// </summary>
+        [AllowAnonymous]
         [HttpGet("top-selling")]
         public async Task<IActionResult> GetTopSellingProducts(
             int count = 10,

@@ -718,10 +718,6 @@ namespace Foodics.Controllers
 
         private string? GetUserId() =>
             User.FindFirstValue("userId");
-
-        // =========================
-        // ➕ Add To Cart
-        // =========================
         [HttpPost("add")]
         public async Task<IActionResult> AddToCart(AddToCartDto dto)
         {
@@ -738,30 +734,34 @@ namespace Foodics.Controllers
 
             if (cart == null)
             {
-                cart = new Cart { UserId = userId, Items = new List<CartItem>() };
+                cart = new Cart
+                {
+                    UserId = userId,
+                    Items = new List<CartItem>()
+                };
+
                 _context.Carts.Add(cart);
             }
 
-            var product = await _context.Products
-                .FirstOrDefaultAsync(p => p.Id == dto.ProductId);
-
+            var product = await _context.Products.FindAsync(dto.ProductId);
             if (product == null)
                 return NotFound("Product not found");
 
-            var productSize = await _context.ProductSizes
-                .FirstOrDefaultAsync(s => s.Id == dto.ProductSizeId);
-
+            var productSize = await _context.ProductSizes.FindAsync(dto.ProductSizeId);
             if (productSize == null)
                 return BadRequest("Product size is required");
 
             var sizePrice = CalculateDiscountedPriceFromSize(product, productSize.Price);
+
+            var sortedMods = dto.ModifierOptionIds?.OrderBy(x => x).ToList()
+                              ?? new List<int>();
 
             var item = cart.Items.FirstOrDefault(x =>
                 x.ProductId == dto.ProductId &&
                 x.ProductSizeId == dto.ProductSizeId &&
                 x.Modifiers.Select(m => m.ModifierOptionId)
                     .OrderBy(i => i)
-                    .SequenceEqual(dto.ModifierOptionIds.OrderBy(i => i))
+                    .SequenceEqual(sortedMods)
             );
 
             if (item != null)
@@ -780,16 +780,18 @@ namespace Foodics.Controllers
                     Modifiers = new List<CartItemModifier>()
                 };
 
-                foreach (var modId in dto.ModifierOptionIds)
+                if (dto.ModifierOptionIds != null && dto.ModifierOptionIds.Any())
                 {
-                    var option = await _context.ModifierOptions.FindAsync(modId);
+                    var options = await _context.ModifierOptions
+                        .Where(x => dto.ModifierOptionIds.Contains(x.Id))
+                        .ToListAsync();
 
-                    if (option != null)
+                    foreach (var opt in options)
                     {
                         cartItem.Modifiers.Add(new CartItemModifier
                         {
-                            ModifierOptionId = modId,
-                            Price = option.ExtraPrice
+                            ModifierOptionId = opt.Id,
+                            Price = opt.ExtraPrice
                         });
                     }
                 }
@@ -799,8 +801,18 @@ namespace Foodics.Controllers
 
             await _context.SaveChangesAsync();
 
-            var cartDto = MapCartToDto(cart, lang);
-            return Ok(cartDto);
+            var refreshedCart = await _context.Carts
+                .AsNoTracking()
+                .Include(c => c.Items)
+                    .ThenInclude(i => i.Modifiers)
+                        .ThenInclude(m => m.ModifierOption)
+                .Include(c => c.Items)
+                    .ThenInclude(i => i.Product)
+                .Include(c => c.Items)
+                    .ThenInclude(i => i.ProductSize)
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            return Ok(MapCartToDto(refreshedCart, lang));
         }
 
         // =========================
@@ -835,20 +847,27 @@ namespace Foodics.Controllers
 
             await _context.SaveChangesAsync();
 
-            var cartDto = MapCartToDto(cart, lang);
-            return Ok(cartDto);
+            var refreshedCart = await _context.Carts
+                .AsNoTracking()
+                .Include(c => c.Items)
+                    .ThenInclude(i => i.Modifiers)
+                        .ThenInclude(m => m.ModifierOption)
+                .Include(c => c.Items)
+                    .ThenInclude(i => i.Product)
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            return Ok(MapCartToDto(refreshedCart, lang));
         }
 
-        // =========================
-        // 🗑 Remove Item
-        // =========================
         [HttpPost("remove/{id}")]
         public async Task<IActionResult> RemoveCartItem(int id)
         {
+            var lang = GetLang();
             var userId = GetUserId();
 
             var cart = await _context.Carts
                 .Include(c => c.Items)
+                    .ThenInclude(i => i.Modifiers)
                 .FirstOrDefaultAsync(c => c.UserId == userId);
 
             if (cart == null)
@@ -859,12 +878,22 @@ namespace Foodics.Controllers
             if (item == null)
                 return NotFound("Cart item not found");
 
+            _context.CartItemModifiers.RemoveRange(item.Modifiers);
             cart.Items.Remove(item);
 
             await _context.SaveChangesAsync();
-            return Ok(cart);
-        }
 
+            var refreshedCart = await _context.Carts
+                .AsNoTracking()
+                .Include(c => c.Items)
+                    .ThenInclude(i => i.Modifiers)
+                        .ThenInclude(m => m.ModifierOption)
+                .Include(c => c.Items)
+                    .ThenInclude(i => i.Product)
+                .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            return Ok(MapCartToDto(refreshedCart, lang));
+        }
         // =========================
         // 🎁 Apply Promo
         // =========================
@@ -912,74 +941,220 @@ namespace Foodics.Controllers
             });
         }
 
-        // =========================
-        // 📦 Checkout
-        // =========================
         [HttpPost("checkout")]
         public async Task<IActionResult> Checkout(CheckoutDto dto)
         {
             var userId = GetUserId();
             var now = NowLocal();
 
-            var cart = await _context.Carts
-                .Include(c => c.Items)
-                    .ThenInclude(i => i.Modifiers)
-                .Include(c => c.Items)
-                    .ThenInclude(i => i.Product)
-                .Include(c => c.Items)
-                    .ThenInclude(i => i.ProductSize)
-                .FirstOrDefaultAsync(c => c.UserId == userId);
+            bool isRewardOrder = dto.RedeemedRewardId.HasValue;
 
-            if (cart == null || !cart.Items.Any())
-                return BadRequest("Cart is empty");
+            Cart? cart = null;
+            RedeemedReward? redeemedReward = null;
 
-            var subTotal = cart.Items.Sum(i =>
-                (i.Price + i.Modifiers.Sum(m => m.Price)) * i.Quantity);
+            // =========================
+            // 🎁 REWARD ORDER
+            // =========================
+            if (isRewardOrder)
+            {
+                redeemedReward = await _context.RedeemedRewards
+                    .Include(r => r.Reward)
+                        .ThenInclude(r => r.Product)
+                    .FirstOrDefaultAsync(r =>
+                        r.Id == dto.RedeemedRewardId &&
+                        r.UserId == userId);
 
-            decimal discount = cart.Discount;
+                if (redeemedReward == null)
+                    return BadRequest("Invalid reward");
 
-            var total = subTotal - discount;
+                if (redeemedReward.IsUsed)
+                    return BadRequest("Reward already used");
+            }
+            else
+            {
+                cart = await _context.Carts
+                    .Include(c => c.Items)
+                        .ThenInclude(i => i.Modifiers)
+                    .Include(c => c.Items)
+                        .ThenInclude(i => i.Product)
+                    .Include(c => c.Items)
+                        .ThenInclude(i => i.ProductSize)
+                    .FirstOrDefaultAsync(c => c.UserId == userId);
 
+                if (cart == null || !cart.Items.Any())
+                    return BadRequest("Cart is empty");
+            }
+
+            // =========================
+            // 💰 SUBTOTAL
+            // =========================
+            decimal subTotal = 0;
+
+            if (!isRewardOrder && cart != null)
+            {
+                subTotal = cart.Items.Sum(i =>
+                    (i.Price + i.Modifiers.Sum(m => m.Price))
+                    * i.Quantity);
+            }
+
+            // =========================
+            // 🎟 PROMO CODE
+            // =========================
+            decimal discountAmount = 0;
+
+            if (!string.IsNullOrWhiteSpace(dto.PromoCode) && !isRewardOrder)
+            {
+                var promo = await _context.PromoCodes.FirstOrDefaultAsync(p =>
+                    p.Code == dto.PromoCode &&
+                    p.IsActive &&
+                    p.StartDate <= now &&
+                    p.EndDate >= now);
+
+                if (promo != null)
+                {
+                    discountAmount =
+                        subTotal * (promo.DiscountAmount / 100m);
+                }
+            }
+
+            // =========================
+            // 🚚 DELIVERY
+            // =========================
+            decimal deliveryFee = 0;
+
+            var settings = await _context.AppSettings
+                .FirstOrDefaultAsync();
+
+            if (dto.OrderType == OrderType.Delivery)
+            {
+                if (settings != null && !settings.IsDeliveryEnabled)
+                    return BadRequest("Delivery disabled");
+
+                deliveryFee = settings?.DeliveryFee ?? 50;
+            }
+
+            // =========================
+            // 🔥 TOTAL
+            // =========================
+            decimal totalAmount = isRewardOrder
+                ? (dto.OrderType == OrderType.Delivery
+                    ? deliveryFee
+                    : 0)
+                : (subTotal - discountAmount + deliveryFee);
+
+            // =========================
+            // ⭐ POINTS
+            // =========================
+            int pointsEarned = isRewardOrder
+                ? 0
+                : (int)(totalAmount / 20);
+
+            // =========================
+            // 📦 ORDER
+            // =========================
             var order = new Order
             {
                 UserId = userId,
+
                 SubTotal = subTotal,
-                DiscountAmount = discount,
-                TotalAmount = total,
+                DiscountAmount = discountAmount,
+                DeliveryFee = deliveryFee,
+                TotalAmount = totalAmount,
+
                 OrderStatus = OrderStatus.Pending,
                 PaymentStatus = PaymentStatus.Unpaid,
+
+                PaymentMethod = dto.PaymentMethod,
                 OrderType = dto.OrderType,
                 ShippingAddress = dto.ShippingAddress,
+
+                PointsEarned = pointsEarned,
+                PointsRedeemed = dto.PointsRedeemed,
+
+                IsRewardOrder = isRewardOrder,
+
                 OrderItems = new List<OrderItem>()
             };
 
-            order.OrderItems = cart.Items.Select(i => new OrderItem
+            // =========================
+            // 🛒 CART ITEMS
+            // =========================
+            if (!isRewardOrder && cart != null)
             {
-                ProductId = i.ProductId,
-                ProductNameAr = i.Product.NameAr,
-                ProductNameEn = i.Product.NameEn,
-                Quantity = i.Quantity,
-                UnitPrice = i.Price,
-                TotalPrice = (i.Price + i.Modifiers.Sum(m => m.Price)) * i.Quantity,
-                Modifiers = i.Modifiers.Select(m => new OrderItemModifier
-                {
-                    ModifierOptionId = m.ModifierOptionId,
-                    Price = m.Price
-                }).ToList()
-            }).ToList();
+                order.OrderItems = cart.Items
+                    .Select(i => new OrderItem
+                    {
+                        ProductId = i.ProductId,
 
+                        ProductNameAr = i.Product.NameAr,
+                        ProductNameEn = i.Product.NameEn,
+
+                        ProductSizeId = i.ProductSizeId,
+
+                        Quantity = i.Quantity,
+                        UnitPrice = i.Price,
+
+                        TotalPrice =
+                            (i.Price + i.Modifiers.Sum(m => m.Price))
+                            * i.Quantity,
+
+                        Modifiers = i.Modifiers
+                            .Select(m => new OrderItemModifier
+                            {
+                                ModifierOptionId = m.ModifierOptionId,
+                                Price = m.Price
+                            })
+                            .ToList()
+                    })
+                    .ToList();
+            }
+
+            // =========================
+            // 🎁 REWARD ITEM
+            // =========================
+            if (isRewardOrder &&
+                redeemedReward?.Reward?.Product != null)
+            {
+                order.OrderItems.Add(new OrderItem
+                {
+                    ProductId = redeemedReward.Reward.ProductId.Value,
+                    ProductNameAr = redeemedReward.Reward.Product.NameAr,
+                    ProductNameEn = redeemedReward.Reward.Product.NameEn,
+                    Quantity = 1,
+                    UnitPrice = 0,
+                    TotalPrice = 0
+                });
+            }
+
+            // =========================
+            // 💾 SAVE
+            // =========================
             _context.Orders.Add(order);
-            _context.Carts.Remove(cart);
+
+            if (redeemedReward != null)
+            {
+                redeemedReward.IsUsed = true;
+                redeemedReward.UsedAt = now;
+            }
+
+            if (!isRewardOrder && cart != null)
+            {
+                _context.Carts.Remove(cart);
+            }
 
             await _context.SaveChangesAsync();
 
             return Ok(new
             {
                 order.Id,
-                order.TotalAmount
+                order.TotalAmount,
+                order.SubTotal,
+                order.DiscountAmount,
+                order.DeliveryFee,
+                order.PointsEarned,
+                order.IsRewardOrder
             });
         }
-
         // =========================
         // 🛒 Mapper
         // =========================
