@@ -622,8 +622,10 @@
 using Foodics.Dtos.Cart.Cart;
 using Foodics.Dtos.Cart.Order;
 using Foodics.Dtos.Cart.Promocode;
+using Foodics.Dtos.Paymob;
 using Foodics.ExtensionMethod;
 using Foodics.Models;
+using Foodics.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -641,11 +643,14 @@ namespace Foodics.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<AppUser> _userManager;
+        private readonly IPaymobService _paymobService;
 
-        public CartController(ApplicationDbContext context, UserManager<AppUser> userManager)
+
+        public CartController(ApplicationDbContext context, UserManager<AppUser> userManager ,  IPaymobService paymobService)
         {
             _context = context;
             _userManager = userManager;
+            _paymobService = paymobService;
         }
 
         // =========================
@@ -1062,7 +1067,9 @@ namespace Foodics.Controllers
                 TotalAmount = totalAmount,
 
                 OrderStatus = OrderStatus.Pending,
-                PaymentStatus = PaymentStatus.Unpaid,
+                PaymentStatus = dto.PaymentMethod == PaymentMethod.Online
+            ? PaymentStatus.Pending
+            : PaymentStatus.Unpaid,
 
                 PaymentMethod = dto.PaymentMethod,
                 OrderType = dto.OrderType,
@@ -1092,11 +1099,11 @@ namespace Foodics.Controllers
                         ProductSizeId = i.ProductSizeId,
 
                         Quantity = i.Quantity,
-                        UnitPrice = i.Price,
-
+                        UnitPrice = i.Price + i.Modifiers.Sum(m => m.Price),
+                       
                         TotalPrice =
-                            (i.Price + i.Modifiers.Sum(m => m.Price))
-                            * i.Quantity,
+(i.Price + i.Modifiers.Sum(m => m.Price))
+* i.Quantity,
 
                         Modifiers = i.Modifiers
                             .Select(m => new OrderItemModifier
@@ -1137,13 +1144,58 @@ namespace Foodics.Controllers
                 redeemedReward.UsedAt = now;
             }
 
-            if (!isRewardOrder && cart != null)
+            if (dto.PaymentMethod == PaymentMethod.CashOnDelivery)
             {
-                _context.Carts.Remove(cart);
+                if (!isRewardOrder && cart != null)
+                {
+                    _context.Carts.Remove(cart);
+                }
             }
 
             await _context.SaveChangesAsync();
 
+            // =========================
+            // 💳 ONLINE PAYMENT
+            // =========================
+            if (dto.PaymentMethod == PaymentMethod.Online)
+            {
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(x => x.Id == userId);
+
+                if (user == null)
+                    return BadRequest("User not found");
+
+                var paymentResult =
+                    await _paymobService.CreatePaymentIntentAsync(
+                        new CreatePaymentIntentRequestDto
+                        {
+                            OrderId = order.Id,
+                            Amount = order.TotalAmount,
+                            CustomerName = user.FullName,
+                            Email = user.Email ?? string.Empty,
+                            PhoneNumber = user.PhoneNumber ?? string.Empty
+                        });
+
+                if (!paymentResult.Success)
+                {
+                    order.PaymentStatus = PaymentStatus.Failed;
+
+                    await _context.SaveChangesAsync();
+
+                    return BadRequest(paymentResult.Message);
+                }
+
+                return Ok(new
+                {
+                    orderId = order.Id,
+                    totalAmount = order.TotalAmount,
+                    payment = paymentResult
+                });
+            }
+
+            // =========================
+            // 💵 CASH RESPONSE
+            // =========================
             return Ok(new
             {
                 order.Id,

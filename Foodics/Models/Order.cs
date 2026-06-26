@@ -26,17 +26,23 @@ namespace Foodics.Models
 
         public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
 
-        public int? PaymentId { get; set; }
+        // public int? PaymentId { get; set; }
 
 
-        [InverseProperty("Order")]
+        [InverseProperty(nameof(Payment.Order))]
         public Payment? Payment { get; set; }
         public OrderStatus OrderStatus { get; set; } = OrderStatus.Pending;
 
         public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Unpaid;
 
         public PaymentMethod PaymentMethod { get; set; }
-        public string? TransactionId { get; set; }
+        public string? PaymobOrderId { get; set; }
+
+        public string? PaymobTransactionId { get; set; }
+
+        public string? ClientSecret { get; set; }
+
+        public DateTime? PaymentDate { get; set; }
         public DateTime? CompletedAt { get; set; }
         public string? ShippingAddress { get; set; }
         public OrderType OrderType { get; internal set; }
@@ -68,9 +74,10 @@ namespace Foodics.Models
 
     public enum PaymentStatus
     {
-        Unpaid,
-        Paid,
-        Failed,
-        Pending
+        Pending = 1,
+        Paid = 2,
+        Failed = 3,
+        Cancelled = 4 , 
+        Unpaid = 5
     }
 }

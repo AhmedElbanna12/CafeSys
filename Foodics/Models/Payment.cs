@@ -8,13 +8,25 @@ namespace Foodics.Models
         [Key]
         public int Id { get; set; }
 
-        [ForeignKey("Order")]
+        [ForeignKey(nameof(Order))]
         public int OrderId { get; set; }
-        public Order Order { get; set; }
+
+        public Order Order { get; set; } = null!;
 
         public decimal Amount { get; set; }
-        public string Method { get; set; } // Cash / Card / Wallet
-        public string Status { get; set; } // Success / Failed
+
+        public PaymentMethod Method { get; set; }
+
+        public PaymentStatus Status { get; set; }
+
+        public string? PaymobOrderId { get; set; }
+
+        public string? TransactionId { get; set; }
+
+        public string? ClientSecret { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime? PaidAt { get; set; }
     }
 }

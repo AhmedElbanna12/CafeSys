@@ -209,6 +209,28 @@ namespace Foodics
             });
 
 
+            builder.Services.AddHttpClient<IPaymobService, PaymobService>();
+            builder.Services.Configure<PaymobOptions>(options =>
+            {
+                options.ApiKey = Environment.GetEnvironmentVariable("PAYMOB_API_KEY")!;
+                options.SecretKey = Environment.GetEnvironmentVariable("PAYMOB_SECRET_KEY")!;
+                options.PublicKey = Environment.GetEnvironmentVariable("PAYMOB_PUBLIC_KEY")!;
+                options.IntegrationId = int.Parse(
+                    Environment.GetEnvironmentVariable("PAYMOB_INTEGRATION_ID")!);
+
+                options.HmacSecret = Environment.GetEnvironmentVariable("PAYMOB_HMAC_SECRET")!;
+                options.BaseUrl = "https://accept.paymob.com";
+
+                options.WebhookUrl =
+                    Environment.GetEnvironmentVariable("PAYMOB_NOTIFICATION_URL")!;
+
+                options.RedirectionUrl =
+                    Environment.GetEnvironmentVariable("PAYMOB_REDIRECTION_URL")!;
+
+                options.WebhookUrl =
+    Environment.GetEnvironmentVariable("PAYMOB_WEBHOOK_URL")!;
+            });
+
             var app = builder.Build();
 
             // Seed Data
