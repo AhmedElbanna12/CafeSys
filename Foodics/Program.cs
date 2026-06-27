@@ -2,6 +2,7 @@
 using DotNetEnv;
 using FirebaseAdmin;
 using Foodics.Dtos.Auth;
+using Foodics.Filters;
 using Foodics.Hub;
 using Foodics.Models;
 using Foodics.Services;
@@ -28,10 +29,17 @@ namespace Foodics
             builder.Configuration.AddEnvironmentVariables();
             DotNetEnv.Env.Load();
 
-            builder.Services.AddControllers()
-    .AddJsonOptions(options => {
-        options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
-    });
+
+            builder.Services.AddControllers(options =>
+            {
+                options.Filters.AddService<ActiveUserFilter>();
+            })
+.AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.DefaultIgnoreCondition =
+        System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+});
+
             // Access variables
             var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION");
             var adminEmail = Environment.GetEnvironmentVariable("ADMIN_EMAIL");
@@ -230,6 +238,10 @@ namespace Foodics
                 options.WebhookUrl =
     Environment.GetEnvironmentVariable("PAYMOB_WEBHOOK_URL")!;
             });
+
+
+
+            builder.Services.AddScoped<ActiveUserFilter>();
 
             var app = builder.Build();
 

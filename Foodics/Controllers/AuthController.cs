@@ -105,27 +105,30 @@ namespace Foodics.Controllers
             if (user == null)
                 return Unauthorized("Invalid Phone Number or Password");
 
+            if (user.IsDeleted)
+                return Unauthorized("This account has been deleted.");
+
+            if (user.IsBlocked)
+                return Unauthorized("This account has been blocked.");
+
             var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, false);
 
             if (!result.Succeeded)
                 return Unauthorized("Invalid Phone Number or Password");
 
-            // 🔥 Generate Access Token
             var accessToken = await _jwtService.GenerateAccessToken(user);
 
-            // 🔥 Generate Refresh Token
             var refreshToken = Convert.ToBase64String(Guid.NewGuid().ToByteArray());
 
             user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(5); // ✅ 5 days
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(5);
 
             await _userManager.UpdateAsync(user);
 
             return Ok(new
             {
-                accessToken = accessToken,
-                refreshToken = refreshToken,
-
+                accessToken,
+                refreshToken,
                 user = new
                 {
                     id = user.Id,
@@ -144,9 +147,14 @@ namespace Foodics.Controllers
             if (user == null)
                 return Unauthorized("Invalid refresh token");
 
+            if (user.IsDeleted)
+                return Unauthorized("This account has been deleted.");
+
+            if (user.IsBlocked)
+                return Unauthorized("This account has been blocked.");
+
             if (user.RefreshTokenExpiryTime < DateTime.UtcNow)
                 return Unauthorized("Refresh token expired");
-
 
             var newAccessToken = await _jwtService.GenerateAccessToken(user);
 
@@ -172,39 +180,53 @@ namespace Foodics.Controllers
             if (user == null)
                 return BadRequest("User not found");
 
+            if (user.IsDeleted)
+                return BadRequest("This account has been deleted.");
+
+            if (user.IsBlocked)
+                return BadRequest("This account has been blocked.");
+
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
 
             var encodedToken = WebUtility.UrlEncode(token);
 
             var resetLink = $"https://orderinsights.vercel.app/reset-password?email={model.Email}&token={encodedToken}";
 
-//var resetLink = $"myapp://reset-password?email={{model.Email}}&token={{Uri.EscapeDataString(token)\r\n";
-
-
-            // ابعت الإيميل هنا
-            await _emailService.SendEmailAsync(model.Email, "Reset Password",
+            await _emailService.SendEmailAsync(
+                model.Email,
+                "Reset Password",
                 $"Click here to reset your password: {resetLink}");
 
             return Ok("Password reset link sent to your email");
         }
+
+
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword(ResetPasswordDto model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
+
             if (user == null)
                 return BadRequest("User not found.");
 
-            // ✅ decode الـ token الأول قبل ما تبعته لـ Identity
+            if (user.IsDeleted)
+                return BadRequest("This account has been deleted.");
+
+            if (user.IsBlocked)
+                return BadRequest("This account has been blocked.");
+
             var decodedToken = WebUtility.UrlDecode(model.Token);
 
-            var result = await _userManager.ResetPasswordAsync(user, decodedToken, model.NewPassword);
+            var result = await _userManager.ResetPasswordAsync(
+                user,
+                decodedToken,
+                model.NewPassword);
 
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
 
             return Ok("Password reset successfully.");
         }
-
 
 
         [Authorize]

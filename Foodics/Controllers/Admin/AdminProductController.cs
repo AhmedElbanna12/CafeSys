@@ -1289,7 +1289,8 @@ namespace Foodics.Controllers.Admin
                 Sizes = product.Sizes.Select(s => new
                 {
                     s.Id,
-                    s.Name,
+                    s.NameAr,
+                    s.NameEn,
                     s.Price,
                     s.IsDefault
                 }),

@@ -84,8 +84,8 @@ namespace Foodics.Controllers.User
                         oi.ProductSizeId,
 
                         // Size Name
-                        SizeName = oi.ProductSize.Name,
-
+                        SizeNameAr = oi.ProductSize.NameAr,
+                        SizeNameEn = oi.ProductSize.NameEn,
                         oi.Quantity,
                         oi.UnitPrice,
                         oi.DiscountAmount,

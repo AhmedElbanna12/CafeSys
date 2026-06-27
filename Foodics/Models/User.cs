@@ -21,5 +21,14 @@ namespace Foodics.Models
 
         public string ? RefreshToken { get; set; }
         public DateTime  ? RefreshTokenExpiryTime { get; set; }
+
+
+        public bool IsBlocked { get; set; } = false;
+
+        public bool IsDeleted { get; set; } = false;
+
+        public DateTime? BlockedAt { get; set; }
+
+        public DateTime? DeletedAt { get; set; }
     }
 }

@@ -30,7 +30,6 @@ namespace Foodics.Controllers.Admin
 
             var size = new ProductSize
             {
-                Name = product.Name,
                 ProductId = productId,
                 NameAr = dto.NameAr,
                 NameEn = dto.NameEn,
@@ -54,7 +53,6 @@ namespace Foodics.Controllers.Admin
             if (size == null)
                 return NotFound("Size not found");
 
-            if (dto.Name != null) size.Name = dto.Name;
             if (dto.NameAr != null) size.NameAr = dto.NameAr;
             if (dto.NameEn != null) size.NameEn = dto.NameEn;
             if (dto.Price.HasValue) size.Price = dto.Price.Value;
