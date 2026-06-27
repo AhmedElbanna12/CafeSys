@@ -36,7 +36,7 @@ namespace POSSystem.Data
         public DbSet<RedeemedReward> RedeemedRewards { get; set; }
 
         public DbSet<UserPoints> UserPoints { get; set; }
-        public DbSet<OtpCode> OtpCode { get; set; }
+        public DbSet<EmailOtp> EmailOtp { get; set; }
 
         public DbSet<Advertisement> Advertisements { get; set; }
 

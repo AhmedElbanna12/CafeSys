@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using POSSystem.Data;
 using QRCoder;
 using System.Drawing.Imaging;
 using System.Net;
@@ -20,7 +21,8 @@ namespace Foodics.Controllers
         private readonly UserManager<AppUser> _userManager;
         private readonly SignInManager<AppUser> _signInManager;
         private readonly JwtService _jwtService;
-        private readonly IEmailService _emailService; 
+        private readonly IEmailService _emailService;
+        private readonly ApplicationDbContext _context;
 
 
 
@@ -28,12 +30,14 @@ namespace Foodics.Controllers
             UserManager<AppUser> userManager,
             SignInManager<AppUser> signInManager,
             JwtService jwtService,
-            IEmailService emailService)
+            IEmailService emailService ,
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _jwtService = jwtService;
-            _emailService = emailService; 
+            _emailService = emailService;
+            _context = context;
 
         }
 
@@ -72,6 +76,39 @@ namespace Foodics.Controllers
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
 
+
+            // Generate OTP
+            var otp = Random.Shared.Next(100000, 999999).ToString();
+
+            // Delete any previous OTP for this email
+            var oldOtps = _context.EmailOtp.Where(x => x.Email == user.Email);
+            _context.EmailOtp.RemoveRange(oldOtps);
+
+            // Save new OTP
+            _context.EmailOtp.Add(new EmailOtp
+            {
+                Email = user.Email,
+                Code = otp,
+                ExpireAt = DateTime.UtcNow.AddMinutes(5),
+                IsUsed = false
+            });
+
+            await _context.SaveChangesAsync();
+
+
+            await _emailService.SendEmailAsync(
+    user.Email,
+    "Foodics Email Verification",
+    $@"
+    <h2>Welcome to Foodics</h2>
+
+    <p>Your verification code is:</p>
+
+    <h1>{otp}</h1>
+
+    <p>This code expires in 5 minutes.</p>
+    ");
+
             // إنشاء QR Code يحتوي على CustomerCode
             var qrGenerator = new QRCodeGenerator();
             var qrData = qrGenerator.CreateQrCode(customerCode, QRCodeGenerator.ECCLevel.Q);
@@ -87,11 +124,123 @@ namespace Foodics.Controllers
             // إرجاع البيانات
             return Ok(new
             {
-                message = "User Created Successfully",
+                message = "User created successfully. Please verify your email.",
                 customerCode = customerCode,
                 qrCodeBase64 = qrBase64
             });
         }
+
+
+
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> VerifyEmail(VerifyEmailDto model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // التحقق من وجود المستخدم
+            var user = await _userManager.FindByEmailAsync(model.Email);
+
+            if (user == null)
+                return BadRequest("User not found.");
+
+            // لو الإيميل متفعل بالفعل
+            if (user.EmailVerified)
+                return BadRequest("Email is already verified.");
+
+            // البحث عن الـ OTP
+            var emailOtp = await _context.EmailOtp
+                .FirstOrDefaultAsync(x =>
+                    x.Email == model.Email &&
+                    x.Code == model.Otp &&
+                    !x.IsUsed);
+
+            if (emailOtp == null)
+                return BadRequest("Invalid OTP.");
+
+            // التحقق من انتهاء الصلاحية
+            if (emailOtp.ExpireAt < DateTime.UtcNow)
+                return BadRequest("OTP has expired.");
+
+            // تفعيل الإيميل
+            user.EmailVerified = true;
+
+            // تعليم الـ OTP بأنه استُخدم
+            emailOtp.IsUsed = true;
+
+            await _userManager.UpdateAsync(user);
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Email verified successfully. You can now login."
+            });
+        }
+
+
+        [HttpPost("resend-otp")]
+        public async Task<IActionResult> ResendOtp(ResendOtpDto model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+
+            if (user == null)
+                return BadRequest("User not found.");
+
+            if (user.EmailVerified)
+                return BadRequest("Email is already verified.");
+
+            // منع إعادة الإرسال قبل مرور دقيقة
+            var lastOtp = await _context.EmailOtp
+                .Where(x => x.Email == model.Email)
+                .OrderByDescending(x => x.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (lastOtp != null &&
+                DateTime.UtcNow < lastOtp.CreatedAt.AddMinutes(1))
+            {
+                return BadRequest("Please wait one minute before requesting another OTP.");
+            }
+
+            // حذف الأكواد القديمة
+            var oldOtps = _context.EmailOtp.Where(x => x.Email == model.Email);
+            _context.EmailOtp.RemoveRange(oldOtps);
+
+            // إنشاء OTP جديد
+            var otp = Random.Shared.Next(100000, 999999).ToString();
+
+            _context.EmailOtp.Add(new EmailOtp
+            {
+                Email = model.Email,
+                Code = otp,
+                CreatedAt = DateTime.UtcNow,
+                ExpireAt = DateTime.UtcNow.AddMinutes(5),
+                IsUsed = false
+            });
+
+            await _context.SaveChangesAsync();
+
+            await _emailService.SendEmailAsync(
+                model.Email,
+                "Foodics Email Verification",
+                $@"
+        <h2>Welcome to Foodics</h2>
+        <p>Your new verification code is:</p>
+        <h1>{otp}</h1>
+        <p>This code expires in 5 minutes.</p>");
+
+            return Ok(new
+            {
+                message = "A new verification code has been sent to your email."
+            });
+        }
+
+
+
+
+
 
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto model)
@@ -110,6 +259,10 @@ namespace Foodics.Controllers
 
             if (user.IsBlocked)
                 return Unauthorized("This account has been blocked.");
+
+            if (!user.EmailVerified)
+                return Unauthorized("Please verify your email before logging in.");
+
 
             var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, false);
 

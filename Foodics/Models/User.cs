@@ -17,11 +17,8 @@ namespace Foodics.Models
 
         public string CustomerCode { get; set; } = Guid.NewGuid().ToString();
 
-
-
         public string ? RefreshToken { get; set; }
         public DateTime  ? RefreshTokenExpiryTime { get; set; }
-
 
         public bool IsBlocked { get; set; } = false;
 
@@ -30,5 +27,10 @@ namespace Foodics.Models
         public DateTime? BlockedAt { get; set; }
 
         public DateTime? DeletedAt { get; set; }
+
+
+        public bool EmailVerified { get; set; } = false;
+
+      
     }
 }
