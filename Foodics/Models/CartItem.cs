@@ -14,5 +14,8 @@
 
         public ICollection<CartItemModifier> Modifiers { get; set; } = new List<CartItemModifier>();
 
+        public string? Comment { get; set; }   
+
+
     }
 }

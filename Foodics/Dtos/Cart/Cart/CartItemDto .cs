@@ -29,6 +29,8 @@
 
         public decimal SizePrice { get; set; }
 
+        public string? Comment { get; set; }
+
         public List<CartItemModifierDto> Modifiers { get; set; } = new();
     }
 }

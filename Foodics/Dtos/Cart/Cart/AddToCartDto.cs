@@ -10,5 +10,7 @@ namespace Foodics.Dtos.Cart.Cart
         public int? ProductSizeId { get; set; }
         public int Quantity { get; set; }
         public List<int> ModifierOptionIds { get; set; } = new();
+
+        public string? Comment { get; set; }
     }
 }

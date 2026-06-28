@@ -32,6 +32,8 @@ namespace Foodics.Models
         public decimal DiscountAmount { get; set; }
         public decimal TotalPrice { get; set; }
 
+        public string? Comment { get; set; }
+
         public ICollection<OrderItemModifier> Modifiers { get; set; } = new List<OrderItemModifier>();
     }
 }

@@ -22,19 +22,21 @@ namespace Foodics.Controllers.Admin
         [HttpGet]
         public IActionResult GetAllUsers()
         {
-            var users = _userManager.Users
-                .Select(user => new UserDto
-                {
-                    Id = user.Id,
-                    UserName = user.UserName,
-                    Email = user.Email,
-                    PhoneNumber = user.PhoneNumber,
-                    IsBlocked = user.IsBlocked,
-                    IsDeleted = user.IsDeleted
-                })
-                .ToList();
+            var users = _userManager.Users.ToList();
 
-            return Ok(users);
+
+            var result = users.Select(user => new UserDto
+{
+    Id = user.Id,
+    FullName = user.FullName,
+    Email = user.Email,
+    PhoneNumber = user.PhoneNumber,
+    IsBlocked = user.IsBlocked,
+    IsDeleted = user.IsDeleted,
+    PhotoImageUrl = user.ProfileImageUrl
+}).ToList();
+
+            return Ok(result);
         }
         // ==========================
         // Get User By Id
@@ -50,7 +52,7 @@ namespace Foodics.Controllers.Admin
             return Ok(new UserDto
             {
                 Id = user.Id,
-                UserName = user.UserName,
+                FullName = user.FullName,
                 Email = user.Email,
                 PhoneNumber = user.PhoneNumber
             });

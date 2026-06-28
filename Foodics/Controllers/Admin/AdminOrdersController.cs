@@ -85,6 +85,9 @@ namespace Foodics.Controllers.Admin
                         SizeNameAr = oi.ProductSize != null ? oi.ProductSize.NameAr : null,
                         SizeNameEn = oi.ProductSize != null ? oi.ProductSize.NameEn : null,
 
+
+                        oi.Comment,  
+
                         oi.Quantity,
                         oi.UnitPrice,
                         oi.DiscountAmount,
