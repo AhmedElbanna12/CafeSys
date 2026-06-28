@@ -19,26 +19,23 @@ namespace Foodics.Controllers.Admin
             _userManager = userManager;
         }
 
-        // ==========================
-        // Get All Users
-        // ==========================
         [HttpGet]
         public IActionResult GetAllUsers()
         {
             var users = _userManager.Users
-                .Where(u => !u.IsDeleted)
                 .Select(user => new UserDto
                 {
                     Id = user.Id,
                     UserName = user.UserName,
                     Email = user.Email,
-                    PhoneNumber = user.PhoneNumber
+                    PhoneNumber = user.PhoneNumber,
+                    IsBlocked = user.IsBlocked,
+                    IsDeleted = user.IsDeleted
                 })
                 .ToList();
 
             return Ok(users);
         }
-
         // ==========================
         // Get User By Id
         // ==========================

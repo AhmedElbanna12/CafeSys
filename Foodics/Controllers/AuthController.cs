@@ -10,6 +10,7 @@ using POSSystem.Data;
 using QRCoder;
 using System.Drawing.Imaging;
 using System.Net;
+using System.Security.Claims;
 using AppUser = Foodics.Models.User;
 
 namespace Foodics.Controllers
@@ -41,9 +42,10 @@ namespace Foodics.Controllers
 
         }
 
+
         // Register
         [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterDto model)
+        public async Task<IActionResult> Register([FromForm] RegisterDto model)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
@@ -59,16 +61,41 @@ namespace Foodics.Controllers
             if (existingUser != null)
                 return BadRequest("Email already exists");
 
+            // رفع صورة البروفايل
+            string? imageUrl = null;
+
+            if (model.ProfileImage != null)
+            {
+                var uploadsFolder = Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    "wwwroot",
+                    "ProfileImages");
+
+                if (!Directory.Exists(uploadsFolder))
+                    Directory.CreateDirectory(uploadsFolder);
+
+                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(model.ProfileImage.FileName)}";
+                var filePath = Path.Combine(uploadsFolder, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await model.ProfileImage.CopyToAsync(stream);
+                }
+
+                imageUrl = $"{Request.Scheme}://{Request.Host}/ProfileImages/{fileName}";
+            }
+
             // إنشاء CustomerCode فريد
             var customerCode = Guid.NewGuid().ToString("N").ToUpper();
 
-            var user = new  AppUser
+            var user = new AppUser
             {
                 FullName = model.FullName,
                 UserName = model.Email,
                 Email = model.Email,
                 PhoneNumber = model.PhoneNumber,
-                CustomerCode = customerCode
+                CustomerCode = customerCode,
+                ProfileImageUrl = imageUrl
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -76,11 +103,10 @@ namespace Foodics.Controllers
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
 
-
             // Generate OTP
             var otp = Random.Shared.Next(100000, 999999).ToString();
 
-            // Delete any previous OTP for this email
+            // Delete any previous OTP
             var oldOtps = _context.EmailOtp.Where(x => x.Email == user.Email);
             _context.EmailOtp.RemoveRange(oldOtps);
 
@@ -95,21 +121,19 @@ namespace Foodics.Controllers
 
             await _context.SaveChangesAsync();
 
-
             await _emailService.SendEmailAsync(
-    user.Email,
-    "Foodics Email Verification",
-    $@"
-    <h2>Welcome to Foodics</h2>
+                user.Email,
+                "Foodics Email Verification",
+                $@"
+<h2>Welcome to Foodics</h2>
 
-    <p>Your verification code is:</p>
+<p>Your verification code is:</p>
 
-    <h1>{otp}</h1>
+<h1>{otp}</h1>
 
-    <p>This code expires in 5 minutes.</p>
-    ");
+<p>This code expires in 5 minutes.</p>");
 
-            // إنشاء QR Code يحتوي على CustomerCode
+            // إنشاء QR Code
             var qrGenerator = new QRCodeGenerator();
             var qrData = qrGenerator.CreateQrCode(customerCode, QRCodeGenerator.ECCLevel.Q);
             var qrCode = new QRCode(qrData);
@@ -121,17 +145,79 @@ namespace Foodics.Controllers
 
             var qrBase64 = Convert.ToBase64String(ms.ToArray());
 
-            // إرجاع البيانات
             return Ok(new
             {
                 message = "User created successfully. Please verify your email.",
-                customerCode = customerCode,
+                customerCode,
+                profileImageUrl = imageUrl,
                 qrCodeBase64 = qrBase64
             });
         }
 
+        [Authorize]
+        [HttpPut("change-profile-image")]
+        public async Task<IActionResult> ChangeProfileImage([FromForm] UpdateProfileImageDto model)
+        {
+            if (model.ProfileImage == null || model.ProfileImage.Length == 0)
+                return BadRequest("Please select an image.");
 
+            var userId = User.FindFirstValue("userId");
+            var user = await _userManager.FindByIdAsync(userId!);
 
+            if (user == null)
+                return NotFound("User not found.");
+
+            // حذف الصورة القديمة
+            if (!string.IsNullOrEmpty(user.ProfileImageUrl))
+            {
+                var oldFileName = Path.GetFileName(user.ProfileImageUrl);
+                var oldFilePath = Path.Combine(
+                    Directory.GetCurrentDirectory(),
+                    "wwwroot",
+                    "ProfileImages",
+                    oldFileName);
+
+                if (System.IO.File.Exists(oldFilePath))
+                {
+                    System.IO.File.Delete(oldFilePath);
+                }
+            }
+
+            // إنشاء فولدر لو مش موجود
+            var uploadsFolder = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                "ProfileImages");
+
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
+
+            // حفظ الصورة الجديدة
+            var fileName = $"{Guid.NewGuid()}{Path.GetExtension(model.ProfileImage.FileName)}";
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await model.ProfileImage.CopyToAsync(stream);
+            }
+
+            var imageUrl = $"{Request.Scheme}://{Request.Host}/ProfileImages/{fileName}";
+
+            user.ProfileImageUrl = imageUrl;
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+                return BadRequest(result.Errors);
+
+            return Ok(new
+            {
+                message = "Profile image updated successfully.",
+                profileImageUrl = imageUrl
+            });
+        }
+
+        [AllowAnonymous]
         [HttpPost("verify-email")]
         public async Task<IActionResult> VerifyEmail(VerifyEmailDto model)
         {
@@ -241,7 +327,7 @@ namespace Foodics.Controllers
 
 
 
-
+        [AllowAnonymous]
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto model)
         {
@@ -257,8 +343,8 @@ namespace Foodics.Controllers
             if (user.IsDeleted)
                 return Unauthorized("This account has been deleted.");
 
-            if (user.IsBlocked)
-                return Unauthorized("This account has been blocked.");
+            //if (user.IsBlocked)
+            //    return Unauthorized("This account has been blocked.");
 
             if (!user.EmailVerified)
                 return Unauthorized("Please verify your email before logging in.");
@@ -325,6 +411,8 @@ namespace Foodics.Controllers
             });
         }
 
+
+        [AllowAnonymous]
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword(ForgotPasswordDto model)
         {

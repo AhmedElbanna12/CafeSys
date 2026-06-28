@@ -31,6 +31,9 @@ namespace Foodics.Models
 
         public bool EmailVerified { get; set; } = false;
 
-      
+        public string? ProfileImageUrl { get; set; }
+
+
+
     }
 }
