@@ -248,19 +248,30 @@ namespace Foodics.Controllers
             if (productSize == null)
                 return BadRequest("Product size is required");
 
+          
             var sizePrice = CalculateDiscountedPriceFromSize(product, productSize.Price);
 
-            var sortedMods = dto.ModifierOptionIds?.OrderBy(x => x).ToList()
-                              ?? new List<int>();
+            var sortedMods = dto.Modifiers
+      .OrderBy(x => x.ModifierOptionId)
+      .Select(x => new
+      {
+          x.ModifierOptionId,
+          x.Quantity
+      })
+      .ToList();
 
             var item = cart.Items.FirstOrDefault(x =>
-                x.ProductId == dto.ProductId &&
-                x.ProductSizeId == dto.ProductSizeId &&
-                x.Modifiers.Select(m => m.ModifierOptionId)
-                    .OrderBy(i => i)
-                    .SequenceEqual(sortedMods)
-            );
-
+     x.ProductId == dto.ProductId &&
+     x.ProductSizeId == dto.ProductSizeId &&
+     x.Modifiers
+         .OrderBy(m => m.ModifierOptionId)
+         .Select(m => new
+         {
+             m.ModifierOptionId,
+             m.Quantity
+         })
+         .SequenceEqual(sortedMods)
+ );
             if (item != null)
             {
                 item.Quantity += dto.Quantity;
@@ -277,25 +288,30 @@ namespace Foodics.Controllers
                     Price = sizePrice,
                     Comment = dto.Comment,
                     Modifiers = new List<CartItemModifier>()
+              
                 };
-
-                if (dto.ModifierOptionIds != null && dto.ModifierOptionIds.Any())
+                if (dto.Modifiers.Any())
                 {
+                    var optionIds = dto.Modifiers
+                        .Select(x => x.ModifierOptionId)
+                        .ToList();
+
                     var options = await _context.ModifierOptions
-                        .Where(x => dto.ModifierOptionIds.Contains(x.Id))
+                        .Where(x => optionIds.Contains(x.Id))
                         .ToListAsync();
 
-                    foreach (var opt in options)
+                    foreach (var modifier in dto.Modifiers)
                     {
+                        var option = options.First(x => x.Id == modifier.ModifierOptionId);
+
                         cartItem.Modifiers.Add(new CartItemModifier
                         {
-                            ModifierOptionId = opt.Id,
-                            Price = opt.ExtraPrice,
-                            Quantity = 1
+                            ModifierOptionId = option.Id,
+                            Price = option.ExtraPrice,
+                            Quantity = modifier.Quantity
                         });
                     }
                 }
-
                 cart.Items.Add(cartItem);
             }
 
@@ -595,18 +611,19 @@ namespace Foodics.Controllers
                         ProductSizeId = i.ProductSizeId,
 
                         Quantity = i.Quantity,
-                        UnitPrice = i.Price + i.Modifiers.Sum(m => m.Price),
-                       
+                        UnitPrice = i.Price +
+            i.Modifiers.Sum(m => m.Price * m.Quantity),
                         TotalPrice =
-(i.Price + i.Modifiers.Sum(m => m.Price))
+(i.Price + i.Modifiers.Sum(m => m.Price * m.Quantity))
 * i.Quantity,
 
                         Modifiers = i.Modifiers
-                            .Select(m => new OrderItemModifier
-                            {
-                                ModifierOptionId = m.ModifierOptionId,
-                                Price = m.Price
-                            })
+    .Select(m => new OrderItemModifier
+    {
+        ModifierOptionId = m.ModifierOptionId,
+        Price = m.Price,
+        Quantity = m.Quantity
+    })
                             .ToList()
                     })
                     .ToList();
@@ -735,6 +752,7 @@ namespace Foodics.Controllers
                         Id = m.Id,
                         ModifierOptionNameAr = m.ModifierOption.NameAr,
                         ModifierOptionNameEn = m.ModifierOption.NameEn,
+                        ModifierOptionId = m.ModifierOptionId,
                         Price = m.Price * m.Quantity , 
                         Quantity = m.Quantity
                     }).ToList()
