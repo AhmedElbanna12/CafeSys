@@ -75,6 +75,14 @@ namespace Foodics.Filters
                 return;
             }
 
+
+            var path = context.HttpContext.Request.Path.Value?.ToLower();
+
+            if (path == "/api/users/me")
+            {
+                return;
+            }
+
             if (user.IsBlocked)
             {
                 context.Result = new ObjectResult(new
