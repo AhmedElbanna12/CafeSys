@@ -96,10 +96,11 @@ namespace Foodics.Controllers.Admin
                         // Modifiers
                         Modifiers = oi.Modifiers.Select(m => new
                         {
-                            // بدل الـ IDs
                             ModifierOptionNameAr = m.ModifierOption.NameAr,
                             ModifierOptionNameEn = m.ModifierOption.NameEn,
-                            m.Price
+                            m.Quantity,
+                            UnitPrice = m.Price,
+                            TotalPrice = m.Price * m.Quantity
                         })
                     })
                 })

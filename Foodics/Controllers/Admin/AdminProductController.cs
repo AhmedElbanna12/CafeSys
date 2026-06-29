@@ -23,9 +23,40 @@ namespace Foodics.Controllers.Admin
             _env = env;
         }
 
+
+
+        private bool IsDiscountActive(Product product)
+        {
+            if (!product.DiscountPercentage.HasValue ||
+                !product.DiscountStart.HasValue ||
+                !product.DiscountEnd.HasValue)
+                return false;
+
+            var now = DateTime.UtcNow.AddHours(3);
+
+            return now >= product.DiscountStart.Value &&
+                   now <= product.DiscountEnd.Value;
+        }
+
+
+
+        // 🔹 Discount logic
+        private decimal CalculateDiscountedPrice(Product product)
+        {
+            if (product.DiscountPercentage.HasValue)
+            {
+                return product.Price -
+                       (product.Price * product.DiscountPercentage.Value / 100);
+            }
+
+            return product.Price;
+        }
+
+
+
         // =========================
         // CREATE PRODUCT
-        
+
         // =========================
         [HttpPost]
         [RequestSizeLimit(10_000_000)]
@@ -349,6 +380,10 @@ namespace Foodics.Controllers.Admin
                 product.PointsReward,
 
                 product.IsAvailable,
+
+                DiscountedPrice = IsDiscountActive(product)
+    ? CalculateDiscountedPrice(product)
+    : product.Price,
 
                 ImageUrl = product.ImageUrl == null
                     ? null
