@@ -1,5 +1,8 @@
-﻿namespace Foodics.Dtos.Paymob
+﻿using System.Text.Json.Serialization;
+
+namespace Foodics.Dtos.Paymob
 {
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public class PaymobWebhookDto
     {
         public bool success { get; set; }
@@ -32,9 +35,9 @@
 
         public string created_at { get; set; } = "";
 
-        public string owner { get; set; } = "";
+        public long owner { get; set; } 
 
-        public OrderData order { get; set; } = new();
+        public PaymobOrderDto order { get; set; } = new(); 
 
         public SourceData source_data { get; set; } = new();
 

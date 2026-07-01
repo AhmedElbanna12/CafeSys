@@ -1,9 +1,11 @@
-﻿using Foodics.Dtos.Paymob;
+﻿using Foodics.Controllers;
+using Foodics.Dtos.Paymob;
 using Foodics.Helpers;
 using Foodics.Models;
 using Foodics.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Microsoft.Owin.Logging;
 using POSSystem.Data;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
@@ -17,15 +19,22 @@ namespace Foodics.Services
         private readonly ApplicationDbContext _context;
         private readonly PaymobOptions _options;
         private readonly HttpClient _httpClient;
+        private readonly ILogger<PaymobController> _logger;
+        private readonly InMemoryLogStore _logStore; // أضف الخاصية
 
         public PaymobService(
             ApplicationDbContext context,
             IOptions<PaymobOptions> options,
-            HttpClient httpClient)
+            HttpClient httpClient,
+             ILogger<PaymobController> logger,
+              InMemoryLogStore logStore)
         {
             _context = context;
             _options = options.Value;
             _httpClient = httpClient;
+            _logStore = logStore;
+            _logger = logger;
+
         }
 
         public async Task<CreatePaymentIntentResponseDto> CreatePaymentIntentAsync(
@@ -220,16 +229,12 @@ namespace Foodics.Services
                 Encoding.UTF8,
                 "application/json");
 
-            _httpClient.DefaultRequestHeaders.Clear();
-
-            _httpClient.DefaultRequestHeaders.Authorization =
-                new AuthenticationHeaderValue(
-                    "Token",
-                    _options.SecretKey);
-
-            var response = await _httpClient.PostAsync(
-                $"{_options.BaseUrl}/v1/intention/",
-                content);
+            var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{_options.BaseUrl}/v1/intention/")
+            {
+                Content = content
+            };
+            httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Token", _options.SecretKey);
+            var response = await _httpClient.SendAsync(httpRequest);
 
             var responseBody = await response.Content.ReadAsStringAsync();
 
@@ -307,27 +312,28 @@ namespace Foodics.Services
 
         private string CalculateHmac(PaymobWebhookDto request)
         {
+            // ✅ bool values لازم lowercase
             var raw =
                 $"{request.amount_cents}" +
                 $"{request.created_at}" +
                 $"{request.currency}" +
-                $"{request.error_occured}" +
-                $"{request.has_parent_transaction}" +
+                $"{request.error_occured.ToString().ToLower()}" +
+                $"{request.has_parent_transaction.ToString().ToLower()}" +
                 $"{request.id}" +
                 $"{request.integration_id}" +
-                $"{request.is_3d_secure}" +
-                $"{request.is_auth}" +
-                $"{request.is_capture}" +
-                $"{request.is_refunded}" +
-                $"{request.is_standalone_payment}" +
-                $"{request.is_voided}" +
+                $"{request.is_3d_secure.ToString().ToLower()}" +
+                $"{request.is_auth.ToString().ToLower()}" +
+                $"{request.is_capture.ToString().ToLower()}" +
+                $"{request.is_refunded.ToString().ToLower()}" +
+                $"{request.is_standalone_payment.ToString().ToLower()}" +
+                $"{request.is_voided.ToString().ToLower()}" +
                 $"{request.order.id}" +
                 $"{request.owner}" +
-                $"{request.pending}" +
+                $"{request.pending.ToString().ToLower()}" +
                 $"{request.source_data.pan}" +
                 $"{request.source_data.sub_type}" +
                 $"{request.source_data.type}" +
-                $"{request.success}";
+                $"{request.success.ToString().ToLower()}";
 
             using var hmac = new HMACSHA512(
                 Encoding.UTF8.GetBytes(_options.HmacSecret));
@@ -335,61 +341,57 @@ namespace Foodics.Services
             var hash = hmac.ComputeHash(
                 Encoding.UTF8.GetBytes(raw));
 
-            return Convert.ToHexString(hash)
-                .ToLowerInvariant();
+            return Convert.ToHexString(hash).ToLowerInvariant();
         }
 
-       
-            public Task<bool> VerifyWebhookAsync(PaymobWebhookDto request)
+
+        // ✅ VerifyWebhookAsync: اقرأ الـ HMAC من parameter مش من الـ DTO
+        public Task<bool> VerifyWebhookAsync(PaymobWebhookDto request, string hmacFromQuery)
         {
             var calculated = CalculateHmac(request);
-
             return Task.FromResult(
-                calculated.Equals(
-                    request.hmac,
-                    StringComparison.OrdinalIgnoreCase));
+                calculated.Equals(hmacFromQuery, StringComparison.OrdinalIgnoreCase));
         }
-        public async Task UpdatePaymentStatusAsync(
-     int paymobOrderId,
-     bool isPaid,
-     string? transactionId)
+
+        // في UpdatePaymentStatusAsync
+        public async Task UpdatePaymentStatusAsync(string merchantOrderId, bool isPaid, string? transactionId)
         {
+            _logStore.AddLog($"🔍 UpdatePaymentStatusAsync called with merchantOrderId: {merchantOrderId}, isPaid: {isPaid}");
+
             var order = await _context.Orders
                 .Include(x => x.Payment)
                 .FirstOrDefaultAsync(x =>
-                    x.PaymobOrderId == paymobOrderId.ToString());
+                    x.Id.ToString() == merchantOrderId ||
+                    x.PaymobOrderId == merchantOrderId);
 
             if (order == null)
+            {
+                _logStore.AddLog($"❌ Order NOT found for ID: {merchantOrderId}");
+                _logger.LogWarning("Order not found for merchantOrderId: {Id}", merchantOrderId);
                 return;
+            }
 
-            // لو اتدفع بالفعل متعملش Update تاني
+            _logStore.AddLog($"✅ Order found: {order.Id}, Current Status: {order.PaymentStatus}");
+
             if (order.PaymentStatus == PaymentStatus.Paid)
+            {
+                _logStore.AddLog($"⚠️ Order {order.Id} already PAID, skipping update");
                 return;
+            }
 
-            order.PaymentStatus =
-                isPaid
-                    ? PaymentStatus.Paid
-                    : PaymentStatus.Failed;
-
+            order.PaymentStatus = isPaid ? PaymentStatus.Paid : PaymentStatus.Failed;
             order.PaymobTransactionId = transactionId;
-            order.PaymentDate = DateTime.UtcNow;
+            order.PaymentDate = isPaid ? TimeHelper.NowCairo() : null;
 
             if (order.Payment != null)
             {
-                order.Payment.Status =
-                    isPaid
-                        ? PaymentStatus.Paid
-                        : PaymentStatus.Failed;
-
+                order.Payment.Status = isPaid ? PaymentStatus.Paid : PaymentStatus.Failed;
                 order.Payment.TransactionId = transactionId;
-
-                order.Payment.PaidAt =
-                    isPaid
-                        ? DateTime.UtcNow
-                        : null;
+                order.Payment.PaidAt = isPaid ? TimeHelper.NowCairo() : null;
             }
 
             await _context.SaveChangesAsync();
+            _logStore.AddLog($"💾 Database updated successfully. New Status: {order.PaymentStatus}");
         }
     }
 }

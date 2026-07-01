@@ -1,5 +1,8 @@
-﻿namespace Foodics.Dtos.Paymob
+﻿using System.Text.Json.Serialization;
+
+namespace Foodics.Dtos.Paymob
 {
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public class SourceData
     {
         public string pan { get; set; } = "";

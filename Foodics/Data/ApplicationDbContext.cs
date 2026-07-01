@@ -51,6 +51,9 @@ namespace POSSystem.Data
         public DbSet<AppSettings> AppSettings { get; set; }
 
         public DbSet<UserDevice> UserDevices { get; set; }
+
+        public DbSet<WebhookLog> WebhookLogs { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

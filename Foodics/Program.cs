@@ -3,6 +3,7 @@ using DotNetEnv;
 using FirebaseAdmin;
 using Foodics.Dtos.Auth;
 using Foodics.Filters;
+using Foodics.Helpers;
 using Foodics.Hub;
 using Foodics.Models;
 using Foodics.Services;
@@ -30,15 +31,21 @@ namespace Foodics
             DotNetEnv.Env.Load();
 
 
+            // ✅ مرة واحدة بس بكل الـ options
             builder.Services.AddControllers(options =>
             {
                 options.Filters.AddService<ActiveUserFilter>();
             })
-.AddJsonOptions(options =>
-{
-    options.JsonSerializerOptions.DefaultIgnoreCondition =
-        System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
-});
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+                options.JsonSerializerOptions.UnmappedMemberHandling =
+                    System.Text.Json.Serialization.JsonUnmappedMemberHandling.Skip;
+                options.JsonSerializerOptions.DefaultIgnoreCondition =
+                    System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+                options.JsonSerializerOptions.ReferenceHandler =
+                    System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+            });
 
             // Access variables
             var connectionString = Environment.GetEnvironmentVariable("DB_CONNECTION");
@@ -95,18 +102,11 @@ namespace Foodics
             });
 
 
-            builder.Services.AddControllers()
-    .AddJsonOptions(options =>
-    {
-        options.JsonSerializerOptions.ReferenceHandler =
-            System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
-    });
 
 
             builder.Services.AddSingleton<OfflineOrderService>();
 
 
-            builder.Services.AddControllers();
             builder.Services.AddSignalR();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
@@ -132,19 +132,26 @@ namespace Foodics
                 options.AddPolicy("AllowFrontend", policy =>
                 {
                     policy.WithOrigins(
-                            
-                             "https://cafe-app-amber.vercel.app" ,
-                             "https://orderinsights.vercel.app" , 
-                              "http://localhost:3000",
-                              "http://localhost:8080",
-                              "http://localhost:5173",
-                              "http://localhost:4173",
-                              "http://192.168.1.96:5173",
-                              "https://localhost:7171"
-                          )
+                        "https://cafe-app-amber.vercel.app",
+                        "https://orderinsights.vercel.app",
+                        "http://localhost:3000",
+                        "http://localhost:8080",
+                        "http://localhost:5173",
+                        "http://localhost:4173",
+                        "http://192.168.1.96:5173",
+                        "https://localhost:7171"
+                    )
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+                });
+
+                // ✅ أضف policy جديدة للـ webhook
+                options.AddPolicy("AllowPaymob", policy =>
+                {
+                    policy.AllowAnyOrigin()
                           .AllowAnyHeader()
-                          .AllowAnyMethod()
-                          .AllowCredentials();
+                          .AllowAnyMethod();
                 });
             });
 
@@ -225,23 +232,16 @@ namespace Foodics
                 options.PublicKey = Environment.GetEnvironmentVariable("PAYMOB_PUBLIC_KEY")!;
                 options.IntegrationId = int.Parse(
                     Environment.GetEnvironmentVariable("PAYMOB_INTEGRATION_ID")!);
-
                 options.HmacSecret = Environment.GetEnvironmentVariable("PAYMOB_HMAC_SECRET")!;
                 options.BaseUrl = "https://accept.paymob.com";
-
-                options.WebhookUrl =
-                    Environment.GetEnvironmentVariable("PAYMOB_NOTIFICATION_URL")!;
-
-                options.RedirectionUrl =
-                    Environment.GetEnvironmentVariable("PAYMOB_REDIRECTION_URL")!;
-
-                options.WebhookUrl =
-    Environment.GetEnvironmentVariable("PAYMOB_WEBHOOK_URL")!;
+                options.WebhookUrl = Environment.GetEnvironmentVariable("PAYMOB_WEBHOOK_URL")!; 
+                options.RedirectionUrl = Environment.GetEnvironmentVariable("PAYMOB_REDIRECTION_URL")!;
             });
 
 
-
             builder.Services.AddScoped<ActiveUserFilter>();
+
+            builder.Services.AddSingleton<InMemoryLogStore>();
 
             var app = builder.Build();
 
@@ -278,11 +278,32 @@ namespace Foodics
 
             app.UseDeveloperExceptionPage(); //temp 
 
-
             app.UseHttpsRedirection();
             app.UseStaticFiles();
+
+            app.UseRouting();          // ✅ MUST be first
+
+            // ✅ Apply CORS with path-based routing
+            app.Use(async (context, next) =>
+            {
+                var path = context.Request.Path.Value ?? "";
+                if (path.StartsWith("/api/paymob/webhook", StringComparison.OrdinalIgnoreCase))
+                {
+                    // ✅ Allow Paymob webhook - any origin
+                    context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
+                    context.Response.Headers.Add("Access-Control-Allow-Methods", "POST, OPTIONS");
+                    context.Response.Headers.Add("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+                    if (context.Request.Method == "OPTIONS")
+                    {
+                        context.Response.StatusCode = 204;
+                        return;
+                    }
+                }
+                await next();
+            });
+
             app.UseCors("AllowFrontend"); 
-            app.UseRouting();          // الأول
            // app.UseRateLimiter();      // ✅ لازم بعد UseRouting
             app.UseAuthentication();   // التاني
             app.UseAuthorization();    // التالت
@@ -291,6 +312,48 @@ namespace Foodics
 
             app.MapControllers();
             app.MapHub<NotificationHub>("/notificationHub");  // بدل UseEndpoints
+                                                              // في آخر الـ endpoints، قبل app.Run()
+
+
+            //var logMessages = new System.Collections.Concurrent.ConcurrentQueue<string>();
+
+            //app.Use(async (context, next) =>
+            //{
+            //    if (context.Request.Path.StartsWithSegments("/api/paymob/webhook"))
+            //    {
+            //        var originalBody = context.Response.Body;
+            //        context.Request.EnableBuffering();
+            //        await next();
+            //        context.Request.Body.Position = 0;
+            //        var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
+            //        var hmac = context.Request.Query["hmac"].ToString();
+            //        logMessages.Enqueue($"[{DateTime.Now}] HMAC={hmac} | Body={body}");
+            //        while (logMessages.Count > 20) logMessages.TryDequeue(out _);
+            //        return;
+            //    }
+            //    await next();
+            //});
+
+            //app.MapGet("/api/paymob/logs", () =>
+            //{
+            //    return string.Join("\n\n---\n\n", logMessages);
+            //}).AllowAnonymous();
+
+
+            //app.Use(async (context, next) =>
+            //{
+            //    if (context.Request.Path.StartsWithSegments("/api/paymob/webhook"))
+            //    {
+            //        context.Request.EnableBuffering();
+            //        var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
+            //        context.Request.Body.Position = 0;
+
+            //        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+            //        logger.LogWarning("🔍 WEBHOOK PAYLOAD: {Payload}", body);
+            //    }
+            //    await next();
+            //});
+
 
             app.Run();
         }

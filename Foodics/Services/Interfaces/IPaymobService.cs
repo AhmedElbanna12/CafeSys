@@ -4,14 +4,16 @@ namespace Foodics.Services.Interfaces
 {
     public interface IPaymobService
     {
+
         Task<CreatePaymentIntentResponseDto> CreatePaymentIntentAsync(
-             CreatePaymentIntentRequestDto request);
+            CreatePaymentIntentRequestDto request);
 
         Task<bool> VerifyWebhookAsync(
-            PaymobWebhookDto request);
+            PaymobWebhookDto request,
+            string hmacFromQuery);
 
         Task UpdatePaymentStatusAsync(
-            int orderId,
+            string merchantOrderId,
             bool isPaid,
             string? transactionId);
     }
