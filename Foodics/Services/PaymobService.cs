@@ -20,19 +20,18 @@ namespace Foodics.Services
         private readonly PaymobOptions _options;
         private readonly HttpClient _httpClient;
         private readonly ILogger<PaymobController> _logger;
-        private readonly InMemoryLogStore _logStore; // أضف الخاصية
+        //private readonly InMemoryLogStore _logStore; // أضف الخاصية
 
         public PaymobService(
             ApplicationDbContext context,
             IOptions<PaymobOptions> options,
             HttpClient httpClient,
-             ILogger<PaymobController> logger,
-              InMemoryLogStore logStore)
+             ILogger<PaymobController> logger
+           )
         {
             _context = context;
             _options = options.Value;
             _httpClient = httpClient;
-            _logStore = logStore;
             _logger = logger;
 
         }
@@ -356,7 +355,7 @@ namespace Foodics.Services
         // في UpdatePaymentStatusAsync
         public async Task UpdatePaymentStatusAsync(string merchantOrderId, bool isPaid, string? transactionId)
         {
-            _logStore.AddLog($"🔍 UpdatePaymentStatusAsync called with merchantOrderId: {merchantOrderId}, isPaid: {isPaid}");
+            //_logStore.AddLog($"🔍 UpdatePaymentStatusAsync called with merchantOrderId: {merchantOrderId}, isPaid: {isPaid}");
 
             var order = await _context.Orders
                 .Include(x => x.Payment)
@@ -366,16 +365,16 @@ namespace Foodics.Services
 
             if (order == null)
             {
-                _logStore.AddLog($"❌ Order NOT found for ID: {merchantOrderId}");
+                //_logStore.AddLog($"❌ Order NOT found for ID: {merchantOrderId}");
                 _logger.LogWarning("Order not found for merchantOrderId: {Id}", merchantOrderId);
                 return;
             }
 
-            _logStore.AddLog($"✅ Order found: {order.Id}, Current Status: {order.PaymentStatus}");
+            //_logStore.AddLog($"✅ Order found: {order.Id}, Current Status: {order.PaymentStatus}");
 
             if (order.PaymentStatus == PaymentStatus.Paid)
             {
-                _logStore.AddLog($"⚠️ Order {order.Id} already PAID, skipping update");
+                //_logStore.AddLog($"⚠️ Order {order.Id} already PAID, skipping update");
                 return;
             }
 
@@ -391,7 +390,7 @@ namespace Foodics.Services
             }
 
             await _context.SaveChangesAsync();
-            _logStore.AddLog($"💾 Database updated successfully. New Status: {order.PaymentStatus}");
+            //_logStore.AddLog($"💾 Database updated successfully. New Status: {order.PaymentStatus}");
         }
     }
 }

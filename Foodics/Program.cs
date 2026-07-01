@@ -241,7 +241,7 @@ namespace Foodics
 
             builder.Services.AddScoped<ActiveUserFilter>();
 
-            builder.Services.AddSingleton<InMemoryLogStore>();
+            //builder.Services.AddSingleton<InMemoryLogStore>();
 
             var app = builder.Build();
 

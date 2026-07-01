@@ -82,7 +82,7 @@ namespace Foodics.Controllers.User
                         oi.ProductNameAr,
                         oi.ProductNameEn,
                         oi.ProductSizeId,
-
+                        oi.Comment , 
                         // Size Name
                         SizeNameAr = oi.ProductSize.NameAr,
                         SizeNameEn = oi.ProductSize.NameEn,
@@ -99,9 +99,11 @@ namespace Foodics.Controllers.User
                             // اسم الـ Modifier فقط
                             ModifierOptionNameAr= m.ModifierOption.NameAr,
                             ModifierOptionNameEn = m.ModifierOption.NameEn,
+                            m.Quantity,
+                            m.Price , 
+                            UnitPrice = m.Price,
+                            TotalPrice = m.Price * m.Quantity 
 
-
-                            m.Price
                         })
                     })
                 })
