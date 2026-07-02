@@ -10,6 +10,7 @@
 
         public int IntegrationId { get; set; }
 
+        public int WalletIntegrationId { get; set; }   
         public string HmacSecret { get; set; } = string.Empty;
 
         public string BaseUrl { get; set; } = "https://accept.paymob.com";

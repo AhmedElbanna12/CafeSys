@@ -232,6 +232,14 @@ namespace Foodics
                 options.PublicKey = Environment.GetEnvironmentVariable("PAYMOB_PUBLIC_KEY")!;
                 options.IntegrationId = int.Parse(
                     Environment.GetEnvironmentVariable("PAYMOB_INTEGRATION_ID")!);
+
+                var walletIntegrationId = Environment.GetEnvironmentVariable("PAYMOB_WALLET_INTEGRATION_ID");
+                if (string.IsNullOrEmpty(walletIntegrationId))
+                {
+                    throw new Exception("PAYMOB_WALLET_INTEGRATION_ID is missing in .env file");
+                }
+                options.WalletIntegrationId = int.Parse(walletIntegrationId);
+
                 options.HmacSecret = Environment.GetEnvironmentVariable("PAYMOB_HMAC_SECRET")!;
                 options.BaseUrl = "https://accept.paymob.com";
                 options.WebhookUrl = Environment.GetEnvironmentVariable("PAYMOB_WEBHOOK_URL")!; 
@@ -241,7 +249,7 @@ namespace Foodics
 
             builder.Services.AddScoped<ActiveUserFilter>();
 
-            //builder.Services.AddSingleton<InMemoryLogStore>();
+            builder.Services.AddSingleton<InMemoryLogStore>();
 
             var app = builder.Build();
 
