@@ -98,7 +98,10 @@ namespace Foodics.Controllers.Admin
                 CategoryId = dto.CategoryId,
                 Calories = dto.Calories,
                 PointsReward = dto.PointsReward,
-                ImageUrl = imageUrl
+                ImageUrl = imageUrl ,
+                IsAvailable = true,
+                IsVisible = true,
+                IsDeleted = false
             };
 
             _context.Products.Add(product);
@@ -113,9 +116,17 @@ namespace Foodics.Controllers.Admin
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
+            //            var products = await _context.Products
+            //                .Where(p => !p.IsDeleted)
+            //.OrderBy(p => p.Category.DisplayOrder)
+            //                .ToListAsync();
+
             var products = await _context.Products
-                .Where(p => !p.IsDeleted)
-                .ToListAsync();
+    .Include(p => p.Category)
+    .Where(p => !p.IsDeleted)
+    .OrderBy(p => p.Category.DisplayOrder)
+    .ThenBy(p => p.NameEn)
+    .ToListAsync();
 
             var result = new List<object>();
 
@@ -146,7 +157,8 @@ namespace Foodics.Controllers.Admin
         [RequestSizeLimit(10_000_000)]
         public async Task<IActionResult> Update(int id, [FromForm] UpdateProductDto dto)
         {
-            var product = await _context.Products.FindAsync(id);
+            var product = await _context.Products
+      .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
 
             if (product == null)
                 return NotFound();
@@ -197,7 +209,9 @@ namespace Foodics.Controllers.Admin
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var product = await _context.Products.FindAsync(id);
+            var product = await _context.Products.FirstOrDefaultAsync(p =>
+    p.Id == id &&
+    !p.IsDeleted);
 
             if (product == null)
                 return NotFound();
@@ -296,6 +310,11 @@ namespace Foodics.Controllers.Admin
                 .AsNoTracking()
                 .AsQueryable();
 
+            query = query.Where(oi =>
+    !oi.Product.IsDeleted &&
+oi.Product.IsVisible &&
+oi.Product.IsAvailable);
+
             // 📅 فلترة اختيارية بالوقت
             if (days.HasValue)
             {
@@ -344,6 +363,26 @@ namespace Foodics.Controllers.Admin
         }
 
 
+
+
+        [HttpPatch("{id}/visibility")]
+        public async Task<IActionResult> ToggleVisibility(int id)
+        {
+            var product = await _context.Products
+     .FirstOrDefaultAsync(p => p.Id == id && !p.IsDeleted);
+
+            if (product == null)
+                return NotFound();
+            product.IsVisible = !product.IsVisible;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                product.Id,
+                product.IsVisible
+            });
+        }
         // =========================
         // MAPPER
         // =========================
@@ -354,8 +393,9 @@ namespace Foodics.Controllers.Admin
                 .Include(p => p.Sizes)
                 .Include(p => p.ModifierGroups)
                     .ThenInclude(g => g.Options)
-                .FirstOrDefaultAsync(p => p.Id == id);
-
+.FirstOrDefaultAsync(p =>
+    p.Id == id &&
+    !p.IsDeleted);
             if (product == null)
                 return null;
 
@@ -380,6 +420,7 @@ namespace Foodics.Controllers.Admin
                 product.PointsReward,
 
                 product.IsAvailable,
+                product.IsVisible,
 
                 DiscountedPrice = IsDiscountActive(product)
     ? CalculateDiscountedPrice(product)
@@ -415,7 +456,8 @@ namespace Foodics.Controllers.Admin
                         o.ExtraPrice
                     })
                 })
-            
+
+
             };
         }
     }

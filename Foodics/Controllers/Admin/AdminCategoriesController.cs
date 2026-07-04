@@ -21,104 +21,6 @@ namespace Foodics.Controllers.Admin
             _context = context;
         }
 
-
-
-        //        [Authorize(Roles = "Admin")]
-        //        // Create Category
-        //        [HttpPost]
-        //        public async Task<IActionResult> CreateCategory(CreateCategoryDto dto)
-        //        {
-        //            var category = new Category
-        //            {
-        //                Name = dto.Name,
-        //                Description = dto.Description
-        //            };
-
-        //            _context.Categories.Add(category);
-        //            await _context.SaveChangesAsync();
-
-        //            return Ok(new CategoryResponseDto
-        //            {
-        //                Id = category.Id,
-        //                Name = category.Name,
-        //                Description = category.Description
-        //            });
-        //        }
-
-        //        // Get All Categories
-        //        [HttpGet]
-        //        public async Task<IActionResult> GetCategories()
-        //        {
-        //            var categories = await _context.Categories.ToListAsync();
-
-        //            var result = categories.Select(c => new CategoryResponseDto
-        //            {
-        //                Id = c.Id,
-        //                Name = c.Name,
-        //                Description = c.Description
-        //            });
-
-        //            return Ok(result);
-        //        }
-
-        //        // Get Single Category
-        //        [HttpGet("{id}")]
-        //        public async Task<IActionResult> GetCategory(int id)
-        //        {
-        //            var category = await _context.Categories.FindAsync(id);
-        //            if (category == null)
-        //                return NotFound("Category not found");
-
-        //            return Ok(new CategoryResponseDto
-        //            {
-        //                Id = category.Id,
-        //                Name = category.Name,
-        //                Description = category.Description
-        //            });
-        //        }
-
-
-        //        [Authorize(Roles = "Admin")]
-        //        // Update Category
-        //        [HttpPut("{id}")]
-        //        public async Task<IActionResult> UpdateCategory(int id, UpdateCategoryDto dto)
-        //        {
-        //            var category = await _context.Categories.FindAsync(id);
-        //            if (category == null)
-        //                return NotFound("Category not found");
-
-        //            category.Name = dto.Name;
-        //            category.Description = dto.Description;
-
-        //            await _context.SaveChangesAsync();
-
-        //            return Ok(new CategoryResponseDto
-        //            {
-        //                Id = category.Id,
-        //                Name = category.Name,
-        //                Description = category.Description
-        //            });
-        //        }
-
-
-        //        [Authorize(Roles = "Admin")]
-        //        // Delete Category
-        //        [HttpDelete("{id}")]
-        //        public async Task<IActionResult> DeleteCategory(int id)
-        //        {
-        //            var category = await _context.Categories.FindAsync(id);
-        //            if (category == null)
-        //                return NotFound("Category not found");
-
-        //            _context.Categories.Remove(category);
-        //            await _context.SaveChangesAsync();
-
-        //            return Ok(new { message = "Category deleted successfully" });
-        //        }
-        //    }
-        //}
-
-
         [HttpPost]
         public async Task<IActionResult> CreateCategory(CreateCategoryDto dto)
         {
@@ -131,7 +33,14 @@ namespace Foodics.Controllers.Admin
                 NameEn = dto.NameEn,
 
                 DescriptionAr = dto.DescriptionAr,
-                DescriptionEn = dto.DescriptionEn
+                DescriptionEn = dto.DescriptionEn,
+
+                IsActive = true,
+                IsVisible = true,
+                IsDeleted = false,
+                DisplayOrder = 0
+
+
             };
 
             _context.Categories.Add(category);
@@ -144,7 +53,11 @@ namespace Foodics.Controllers.Admin
                 NameEn = category.NameEn ?? string.Empty,
                 DescriptionAr = category.DescriptionAr,
                 DescriptionEn = category.DescriptionEn ,
-                IsActive = true
+                 IsActive = category.IsActive,
+
+                IsVisible = category.IsVisible,
+
+                DisplayOrder = category.DisplayOrder
             });
         }
 
@@ -161,7 +74,13 @@ namespace Foodics.Controllers.Admin
                 NameAr = c.NameAr ?? c.Name ?? string.Empty,
                 NameEn = c.NameEn ?? c.Name ?? string.Empty,
                 DescriptionAr = c.DescriptionAr,
-                DescriptionEn = c.DescriptionEn
+                DescriptionEn = c.DescriptionEn,
+
+                IsActive = c.IsActive,
+
+                IsVisible = c.IsVisible,
+
+                DisplayOrder = c.DisplayOrder
             });
 
             return Ok(result);
@@ -171,8 +90,9 @@ namespace Foodics.Controllers.Admin
         [HttpGet("{id}")]
         public async Task<IActionResult> GetCategory(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var category = await _context.Categories
 
+                .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
             if (category == null)
                 return NotFound("Category not found");
 
@@ -182,7 +102,12 @@ namespace Foodics.Controllers.Admin
                 NameAr = category.NameAr ?? category.Name ?? string.Empty,
                 NameEn = category.NameEn ?? category.Name ?? string.Empty,
                 DescriptionAr = category.DescriptionAr,
-                DescriptionEn = category.DescriptionEn
+                DescriptionEn = category.DescriptionEn,
+                IsActive = category.IsActive,
+
+                IsVisible = category.IsVisible,
+
+                DisplayOrder = category.DisplayOrder
             });
         }
 
@@ -191,7 +116,8 @@ namespace Foodics.Controllers.Admin
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateCategory(int id, UpdateCategoryDto dto)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var category = await _context.Categories
+                .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
 
             if (category == null)
                 return NotFound("Category not found");
@@ -208,6 +134,15 @@ namespace Foodics.Controllers.Admin
             if (!string.IsNullOrWhiteSpace(dto.DescriptionEn))
                 category.DescriptionEn = dto.DescriptionEn;
 
+            if (dto.IsVisible.HasValue)
+                category.IsVisible = dto.IsVisible.Value;
+
+            if (dto.DisplayOrder.HasValue)
+                category.DisplayOrder = dto.DisplayOrder.Value;
+
+            if (dto.IsActive.HasValue)
+                category.IsActive = dto.IsActive.Value;
+
             // Backward Compatibility
             category.Name = category.NameAr
                 ?? category.NameEn
@@ -221,20 +156,61 @@ namespace Foodics.Controllers.Admin
                 NameAr = category.NameAr ?? category.Name ?? string.Empty,
                 NameEn = category.NameEn ?? category.Name ?? string.Empty,
                 DescriptionAr = category.DescriptionAr,
-                DescriptionEn = category.DescriptionEn
+                DescriptionEn = category.DescriptionEn,
+                IsActive = category.IsActive,
+
+                IsVisible = category.IsVisible,
+
+                DisplayOrder = category.DisplayOrder
             });
+        }
+
+        [HttpPatch("{id}/visibility")]
+        public async Task<IActionResult> ToggleVisibility(int id)
+        {
+            var category = await _context.Categories.FindAsync(id);
+
+            if (category == null || category.IsDeleted)
+                return NotFound();
+
+            category.IsVisible = !category.IsVisible;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                category.Id,
+                category.IsVisible
+            });
+        }
+
+
+        [HttpPatch("{id}/order")]
+        public async Task<IActionResult> UpdateOrder(int id, UpdateCategoryOrderDto dto)
+        {
+            var category = await _context.Categories.FindAsync(id);
+
+            if (category == null || category.IsDeleted)
+                return NotFound();
+
+            category.DisplayOrder = dto.DisplayOrder;
+
+            await _context.SaveChangesAsync();
+
+            return Ok();
         }
 
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCategory(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var category = await _context.Categories
+     .FirstOrDefaultAsync(c => c.Id == id && !c.IsDeleted);
 
             if (category == null)
                 return NotFound("Category not found");
 
-            _context.Categories.Remove(category);
+            category.IsDeleted = true;
 
             await _context.SaveChangesAsync();
 
@@ -242,6 +218,7 @@ namespace Foodics.Controllers.Admin
             {
                 message = "Category deleted successfully"
             });
+
         }
     }
 }

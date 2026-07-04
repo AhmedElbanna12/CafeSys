@@ -35,6 +35,8 @@ namespace Foodics.Models
 
         public bool IsDeleted { get; set; } = false;
 
+        public bool IsVisible { get; set; } = true;
+
         [ForeignKey("Category")]
         public int CategoryId { get; set; }
         public Category Category { get; set; }

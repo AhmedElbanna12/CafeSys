@@ -124,8 +124,12 @@ namespace Foodics.Controllers
             var lang = GetLang();
 
             var categories = await _context.Categories
-                .Where(c => c.IsActive)
-                .ToListAsync();
+    .Where(c =>
+        c.IsActive &&
+        c.IsVisible &&
+        !c.IsDeleted)
+    .OrderBy(c => c.DisplayOrder)
+    .ToListAsync();
 
             var result = categories.Select(c => new CategoryResponseDto
             {
@@ -152,7 +156,11 @@ namespace Foodics.Controllers
             var lang = GetLang();
 
             var category = await _context.Categories
-                .FirstOrDefaultAsync(c => c.Id == id && c.IsActive);
+.FirstOrDefaultAsync(c =>
+    c.Id == id &&
+    c.IsActive &&
+    c.IsVisible &&
+    !c.IsDeleted);
 
             if (category == null)
                 return NotFound("Category not found");

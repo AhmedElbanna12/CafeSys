@@ -48,8 +48,7 @@ namespace Foodics.Controllers
             var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
             var products = await _context.Products
-                .Where(p => !p.IsDeleted)
-                .Include(p => p.Category)
+.Where(p => !p.IsDeleted && p.IsAvailable && p.IsVisible).Include(p => p.Category)
                 .Include(p => p.Sizes)
                 .Include(p => p.ModifierGroups)
                     .ThenInclude(g => g.Options)
