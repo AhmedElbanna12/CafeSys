@@ -725,6 +725,22 @@ namespace Foodics.Controllers
         // =========================
         private CartDto MapCartToDto(Cart cart, string lang)
         {
+
+            var subTotalBeforeDiscount = cart.Items.Sum(i =>
+    ((i.ProductSize?.Price ?? i.Price) +
+     i.Modifiers.Sum(m => m.Price * m.Quantity)) * i.Quantity);
+
+            var subTotalAfterProductDiscount = cart.Items.Sum(i =>
+                (i.Price +
+                 i.Modifiers.Sum(m => m.Price * m.Quantity)) * i.Quantity);
+
+            var productDiscount =
+                subTotalBeforeDiscount - subTotalAfterProductDiscount;
+
+            var promoDiscount = cart.Discount;
+
+            var totalDiscount = productDiscount + promoDiscount;
+
             return new CartDto
             {
                 Id = cart.Id,
@@ -758,11 +774,20 @@ namespace Foodics.Controllers
                     }).ToList()
                 }).ToList(),
 
-                SubTotal = cart.Items.Sum(i =>
-     (i.Price + i.Modifiers.Sum(m => m.Price * m.Quantity)) * i.Quantity),
+                // قبل أي خصومات
+                SubTotal = subTotalBeforeDiscount,
 
-                Total = cart.Items.Sum(i =>
-                    (i.Price + i.Modifiers.Sum(m => m.Price * m.Quantity)) * i.Quantity),
+                // خصم المنتجات
+                ProductDiscount = productDiscount,
+
+                // خصم البروموكود
+                PromoDiscount = promoDiscount,
+
+                // إجمالي الخصومات
+                Discount = totalDiscount,
+
+                // النهائي بعد كل الخصومات
+                Total = subTotalAfterProductDiscount - promoDiscount,
 
                 PromoCode = cart.PromoCode
             };
@@ -794,8 +819,11 @@ namespace Foodics.Controllers
                     UserId = userId,
                     Items = new List<CartItemDto>(),
                     SubTotal = 0,
+                    ProductDiscount = 0,
+                    PromoDiscount = 0,
                     Discount = 0,
-                    Total = 0
+                    Total = 0,
+                    PromoCode = null
                 });
 
             return Ok(MapCartToDto(cart, lang));
