@@ -43,7 +43,6 @@ namespace Foodics.Controllers
         }
 
 
-        // Register
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromForm] RegisterDto model)
         {
@@ -61,70 +60,79 @@ namespace Foodics.Controllers
             if (existingUser != null)
                 return BadRequest("Email already exists");
 
-            // رفع صورة البروفايل
-            string? imageUrl = null;
+            await using var transaction = await _context.Database.BeginTransactionAsync();
 
-            if (model.ProfileImage != null)
+            try
             {
-                var uploadsFolder = Path.Combine(
-                    Directory.GetCurrentDirectory(),
-                    "wwwroot",
-                    "ProfileImages");
+                // رفع صورة البروفايل
+                string? imageUrl = null;
 
-                if (!Directory.Exists(uploadsFolder))
-                    Directory.CreateDirectory(uploadsFolder);
-
-                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(model.ProfileImage.FileName)}";
-                var filePath = Path.Combine(uploadsFolder, fileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
+                if (model.ProfileImage != null)
                 {
-                    await model.ProfileImage.CopyToAsync(stream);
+                    var uploadsFolder = Path.Combine(
+                        Directory.GetCurrentDirectory(),
+                        "wwwroot",
+                        "ProfileImages");
+
+                    if (!Directory.Exists(uploadsFolder))
+                        Directory.CreateDirectory(uploadsFolder);
+
+                    var fileName = $"{Guid.NewGuid()}{Path.GetExtension(model.ProfileImage.FileName)}";
+                    var filePath = Path.Combine(uploadsFolder, fileName);
+
+                    using (var stream = new FileStream(filePath, FileMode.Create))
+                    {
+                        await model.ProfileImage.CopyToAsync(stream);
+                    }
+
+                    imageUrl = $"{Request.Scheme}://{Request.Host}/ProfileImages/{fileName}";
                 }
 
-                imageUrl = $"{Request.Scheme}://{Request.Host}/ProfileImages/{fileName}";
-            }
+                // إنشاء CustomerCode
+                var customerCode = Guid.NewGuid().ToString("N").ToUpper();
 
-            // إنشاء CustomerCode فريد
-            var customerCode = Guid.NewGuid().ToString("N").ToUpper();
+                var user = new AppUser
+                {
+                    FullName = model.FullName,
+                    UserName = model.Email,
+                    Email = model.Email,
+                    PhoneNumber = model.PhoneNumber,
+                    CustomerCode = customerCode,
+                    ProfileImageUrl = imageUrl
+                };
 
-            var user = new AppUser
-            {
-                FullName = model.FullName,
-                UserName = model.Email,
-                Email = model.Email,
-                PhoneNumber = model.PhoneNumber,
-                CustomerCode = customerCode,
-                ProfileImageUrl = imageUrl
-            };
+                var result = await _userManager.CreateAsync(user, model.Password);
 
-            var result = await _userManager.CreateAsync(user, model.Password);
+                if (!result.Succeeded)
+                {
+                    await transaction.RollbackAsync();
+                    return BadRequest(result.Errors);
+                }
 
-            if (!result.Succeeded)
-                return BadRequest(result.Errors);
+                // Generate OTP
+                var otp = Random.Shared.Next(100000, 999999).ToString();
 
-            // Generate OTP
-            var otp = Random.Shared.Next(100000, 999999).ToString();
+                // حذف أي OTP قديم
+                var oldOtps = _context.EmailOtp.Where(x => x.Email == user.Email);
+                _context.EmailOtp.RemoveRange(oldOtps);
 
-            // Delete any previous OTP
-            var oldOtps = _context.EmailOtp.Where(x => x.Email == user.Email);
-            _context.EmailOtp.RemoveRange(oldOtps);
+                // حفظ OTP الجديد
+                _context.EmailOtp.Add(new EmailOtp
+                {
+                    Email = user.Email,
+                    Code = otp,
+                    CreatedAt = DateTime.UtcNow,
+                    ExpireAt = DateTime.UtcNow.AddMinutes(5),
+                    IsUsed = false
+                });
 
-            // Save new OTP
-            _context.EmailOtp.Add(new EmailOtp
-            {
-                Email = user.Email,
-                Code = otp,
-                ExpireAt = DateTime.UtcNow.AddMinutes(5),
-                IsUsed = false
-            });
+                await _context.SaveChangesAsync();
 
-            await _context.SaveChangesAsync();
-
-            await _emailService.SendEmailAsync(
-                user.Email,
-                "Foodics Email Verification",
-                $@"
+                // إرسال الإيميل
+                await _emailService.SendEmailAsync(
+                    user.Email,
+                    "Foodics Email Verification",
+                    $@"
 <h2>Welcome to Foodics</h2>
 
 <p>Your verification code is:</p>
@@ -133,25 +141,38 @@ namespace Foodics.Controllers
 
 <p>This code expires in 5 minutes.</p>");
 
-            // إنشاء QR Code
-            var qrGenerator = new QRCodeGenerator();
-            var qrData = qrGenerator.CreateQrCode(customerCode, QRCodeGenerator.ECCLevel.Q);
-            var qrCode = new QRCode(qrData);
+                // إنشاء QR Code
+                var qrGenerator = new QRCodeGenerator();
+                var qrData = qrGenerator.CreateQrCode(customerCode, QRCodeGenerator.ECCLevel.Q);
+                var qrCode = new QRCode(qrData);
 
-            using var qrBitmap = qrCode.GetGraphic(20);
-            using var ms = new MemoryStream();
+                using var qrBitmap = qrCode.GetGraphic(20);
+                using var ms = new MemoryStream();
 
-            qrBitmap.Save(ms, ImageFormat.Png);
+                qrBitmap.Save(ms, ImageFormat.Png);
 
-            var qrBase64 = Convert.ToBase64String(ms.ToArray());
+                var qrBase64 = Convert.ToBase64String(ms.ToArray());
 
-            return Ok(new
+                await transaction.CommitAsync();
+
+                return Ok(new
+                {
+                    message = "User created successfully. Please verify your email.",
+                    customerCode,
+                    profileImageUrl = imageUrl,
+                    qrCodeBase64 = qrBase64
+                });
+            }
+            catch (Exception ex)
             {
-                message = "User created successfully. Please verify your email.",
-                customerCode,
-                profileImageUrl = imageUrl,
-                qrCodeBase64 = qrBase64
-            });
+                await transaction.RollbackAsync();
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    message = "Registration failed. Please try again.",
+                    error = ex.Message // احذفه في الـ Production لو مش محتاجه
+                });
+            }
         }
 
         [Authorize]
