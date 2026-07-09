@@ -66,8 +66,9 @@ namespace Foodics.Controllers.Admin
         [HttpGet]
         public async Task<IActionResult> GetCategories()
         {
-            var categories = await _context.Categories.ToListAsync();
-
+            var categories = await _context.Categories
+                    .Where(c => !c.IsDeleted)
+                    .ToListAsync();
             var result = categories.Select(c => new CategoryAdminDto
             {
                 Id = c.Id,

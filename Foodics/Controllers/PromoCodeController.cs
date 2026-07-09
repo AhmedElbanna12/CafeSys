@@ -9,6 +9,8 @@ namespace Foodics.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Admin")]
+
     public class PromoCodeController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -89,6 +91,25 @@ namespace Foodics.Controllers
                 promo.Code,
                 promo.DiscountAmount
             });
+        }
+
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAll()
+        {
+            var promoCodes = await _context.PromoCodes
+                .OrderByDescending(p => p.Id)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.Code,
+                    p.DiscountAmount,
+                    p.StartDate,
+                    p.EndDate,
+                    p.IsActive
+                })
+                .ToListAsync();
+
+            return Ok(promoCodes);
         }
     }
 }
