@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using POSSystem.Data;
 
@@ -11,9 +12,11 @@ using POSSystem.Data;
 namespace Foodics.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260711231848_EditHome")]
+    partial class EditHome
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -311,36 +314,6 @@ namespace Foodics.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("HomeSections");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            DisplayOrder = 1,
-                            IsVisible = true,
-                            SectionName = 1
-                        },
-                        new
-                        {
-                            Id = 2,
-                            DisplayOrder = 2,
-                            IsVisible = true,
-                            SectionName = 2
-                        },
-                        new
-                        {
-                            Id = 3,
-                            DisplayOrder = 3,
-                            IsVisible = true,
-                            SectionName = 3
-                        },
-                        new
-                        {
-                            Id = 4,
-                            DisplayOrder = 4,
-                            IsVisible = true,
-                            SectionName = 4
-                        });
                 });
 
             modelBuilder.Entity("Foodics.Models.Ingredient", b =>

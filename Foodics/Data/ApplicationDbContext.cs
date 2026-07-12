@@ -1,4 +1,5 @@
 ﻿using Foodics.Models;
+using Foodics.SeedDatas;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection.Emit;
@@ -54,9 +55,16 @@ namespace POSSystem.Data
 
         public DbSet<WebhookLog> WebhookLogs { get; set; }
 
+        public DbSet<SplashScreen> SplashScreens { get; set; }
+
+
+        public DbSet<HomeSection> HomeSections { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
+
+            HomeSectionSeed.Seed(builder);
 
 
             // =========================
