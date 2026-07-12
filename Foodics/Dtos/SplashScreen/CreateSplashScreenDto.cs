@@ -12,5 +12,8 @@ namespace Foodics.Dtos.SplashScreen
 
         [Required]
         public IFormFile Photo { get; set; } = null!;
+
+
+        public IFormFile? Video { get; set; }
     }
 }

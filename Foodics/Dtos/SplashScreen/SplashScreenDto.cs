@@ -9,5 +9,7 @@
         public string Description { get; set; } = null!;
 
         public string Photo { get; set; } = null!;
+
+        public string? Video { get; set; }
     }
 }

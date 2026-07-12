@@ -14,5 +14,7 @@ namespace Foodics.Models
 
         [Required]
         public string Photo { get; set; } = null!;
+
+        public string? Video { get; set; }
     }
 }

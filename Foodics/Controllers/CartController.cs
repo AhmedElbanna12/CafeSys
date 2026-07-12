@@ -532,21 +532,27 @@ namespace Foodics.Controllers
                         subTotal * (promo.DiscountAmount / 100m);
                 }
             }
-
             // =========================
-            // 🚚 DELIVERY
+            // 🚚 ORDER TYPE SETTINGS
             // =========================
             decimal deliveryFee = 0;
 
-            var settings = await _context.AppSettings
-                .FirstOrDefaultAsync();
+            var settings = await _context.AppSettings.FirstOrDefaultAsync();
 
-            if (dto.OrderType == OrderType.Delivery)
+            if (settings != null)
             {
-                if (settings != null && !settings.IsDeliveryEnabled)
-                    return BadRequest("Delivery disabled");
+                if (dto.OrderType == OrderType.Delivery)
+                {
+                    if (!settings.IsDeliveryEnabled)
+                        return BadRequest("Delivery is currently unavailable.");
 
-                deliveryFee = settings?.DeliveryFee ?? 50;
+                    deliveryFee = settings.DeliveryFee;
+                }
+                else if (dto.OrderType == OrderType.Pickup)
+                {
+                    if (!settings.IsPickupEnabled)
+                        return BadRequest("Pickup is currently unavailable.");
+                }
             }
 
             // =========================

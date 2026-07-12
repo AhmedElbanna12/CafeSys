@@ -106,9 +106,10 @@ public class NotificationsController : ControllerBase
         await _context.SaveChangesAsync();
 
         var tokens = await _context.UserDevices
-            .Where(x => !string.IsNullOrEmpty(x.DeviceToken))
-            .Select(x => x.DeviceToken)
-            .ToListAsync();
+      .Where(x => !string.IsNullOrEmpty(x.DeviceToken))
+      .Select(x => x.DeviceToken)
+      .Distinct()
+      .ToListAsync();
 
         if (!tokens.Any())
             return Ok("Notifications saved. No device tokens found.");
@@ -171,9 +172,11 @@ public class NotificationsController : ControllerBase
                 dto.BodyEn);
 
         var tokens = await _context.UserDevices
-            .Where(x => x.UserId == dto.UserId)
-            .Select(x => x.DeviceToken)
-            .ToListAsync();
+      .Where(x => x.UserId == dto.UserId
+               && !string.IsNullOrEmpty(x.DeviceToken))
+      .Select(x => x.DeviceToken)
+      .Distinct()
+      .ToListAsync();
 
         foreach (var token in tokens)
         {
@@ -293,6 +296,51 @@ public class NotificationsController : ControllerBase
         return Ok("Deleted");
     }
 
+    //// =====================
+    //// تسجيل Device Token
+    //// =====================
+    //[Authorize]
+    //[HttpPost("register-device")]
+    //public async Task<IActionResult> RegisterDevice([FromBody] RegisterDeviceDto dto)
+    //{
+    //    // ✅ لو الـ token فاضي مترجعش error بس متعملش حاجة
+    //    if (string.IsNullOrEmpty(dto.Token))
+    //        return BadRequest("Device token is required");
+
+    //    var userId = User.FindFirst("userId")?.Value;
+
+    //    // ✅ لو الـ token موجود لحد تاني، شيله منه الأول
+    //    var existing = await _context.UserDevices
+    //        .FirstOrDefaultAsync(x => x.DeviceToken == dto.Token);
+
+    //    if (existing != null)
+    //    {
+    //        existing.UserId = userId; // حوّله للـ user الحالي
+    //        await _context.SaveChangesAsync();
+    //        return Ok();
+    //    }
+
+    //    // ✅ لو الـ user عنده device قبل كده، حدّثه بدل ما تضيف جديد
+    //    var userDevice = await _context.UserDevices
+    //        .FirstOrDefaultAsync(x => x.UserId == userId);
+
+    //    if (userDevice != null)
+    //    {
+    //        userDevice.DeviceToken = dto.Token;
+    //    }
+    //    else
+    //    {
+    //        _context.UserDevices.Add(new UserDevice
+    //        {
+    //            UserId = userId,
+    //            DeviceToken = dto.Token
+    //        });
+    //    }
+
+    //    await _context.SaveChangesAsync();
+    //    return Ok();
+    //}
+
     // =====================
     // تسجيل Device Token
     // =====================
@@ -300,42 +348,51 @@ public class NotificationsController : ControllerBase
     [HttpPost("register-device")]
     public async Task<IActionResult> RegisterDevice([FromBody] RegisterDeviceDto dto)
     {
-        // ✅ لو الـ token فاضي مترجعش error بس متعملش حاجة
-        if (string.IsNullOrEmpty(dto.Token))
+        if (string.IsNullOrWhiteSpace(dto.Token))
             return BadRequest("Device token is required");
 
-        var userId = User.FindFirst("userId")?.Value;
 
-        // ✅ لو الـ token موجود لحد تاني، شيله منه الأول
-        var existing = await _context.UserDevices
+        var userId = User.FindFirst("userId")?.Value
+                     ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized("User id not found");
+
+
+        // لو نفس الجهاز مسجل قبل كده
+        var existingDevice = await _context.UserDevices
             .FirstOrDefaultAsync(x => x.DeviceToken == dto.Token);
 
-        if (existing != null)
+
+        if (existingDevice != null)
         {
-            existing.UserId = userId; // حوّله للـ user الحالي
+            // لو نفس المستخدم
+            if (existingDevice.UserId == userId)
+                return Ok("Device already registered");
+
+
+            // لو الجهاز كان مربوط بمستخدم آخر
+            existingDevice.UserId = userId;
+
             await _context.SaveChangesAsync();
-            return Ok();
+
+            return Ok("Device moved to current user");
         }
 
-        // ✅ لو الـ user عنده device قبل كده، حدّثه بدل ما تضيف جديد
-        var userDevice = await _context.UserDevices
-            .FirstOrDefaultAsync(x => x.UserId == userId);
 
-        if (userDevice != null)
+        // إضافة جهاز جديد
+        _context.UserDevices.Add(new UserDevice
         {
-            userDevice.DeviceToken = dto.Token;
-        }
-        else
-        {
-            _context.UserDevices.Add(new UserDevice
-            {
-                UserId = userId,
-                DeviceToken = dto.Token
-            });
-        }
+            UserId = userId,
+            DeviceToken = dto.Token
+        });
+
 
         await _context.SaveChangesAsync();
-        return Ok();
+
+
+        return Ok("Device registered successfully");
     }
 }
 

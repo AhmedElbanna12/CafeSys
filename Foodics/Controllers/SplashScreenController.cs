@@ -13,7 +13,8 @@ namespace Foodics.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _environment;
 
-        public SplashScreenController(ApplicationDbContext context,
+        public SplashScreenController(
+            ApplicationDbContext context,
             IWebHostEnvironment environment)
         {
             _context = context;
@@ -31,7 +32,8 @@ namespace Foodics.Controllers
                     Id = x.Id,
                     Title = x.Title,
                     Description = x.Description,
-                    Photo = x.Photo
+                    Photo = x.Photo,
+                    Video = x.Video
                 })
                 .ToListAsync();
 
@@ -48,20 +50,43 @@ namespace Foodics.Controllers
             if (!Directory.Exists(uploadsFolder))
                 Directory.CreateDirectory(uploadsFolder);
 
-            var fileName = Guid.NewGuid() + Path.GetExtension(dto.Photo.FileName);
+            string? photoPath = null;
+            string? videoPath = null;
 
-            var filePath = Path.Combine(uploadsFolder, fileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            // Upload Photo
+            if (dto.Photo != null)
             {
-                await dto.Photo.CopyToAsync(stream);
+                var photoName = Guid.NewGuid() + Path.GetExtension(dto.Photo.FileName);
+                var photoFilePath = Path.Combine(uploadsFolder, photoName);
+
+                using (var stream = new FileStream(photoFilePath, FileMode.Create))
+                {
+                    await dto.Photo.CopyToAsync(stream);
+                }
+
+                photoPath = "/uploads/" + photoName;
+            }
+
+            // Upload Video
+            if (dto.Video != null)
+            {
+                var videoName = Guid.NewGuid() + Path.GetExtension(dto.Video.FileName);
+                var videoFilePath = Path.Combine(uploadsFolder, videoName);
+
+                using (var stream = new FileStream(videoFilePath, FileMode.Create))
+                {
+                    await dto.Video.CopyToAsync(stream);
+                }
+
+                videoPath = "/uploads/" + videoName;
             }
 
             var splash = new SplashScreen
             {
                 Title = dto.Title,
                 Description = dto.Description,
-                Photo = "/uploads/" + fileName
+                Photo = photoPath,
+                Video = videoPath
             };
 
             _context.SplashScreens.Add(splash);
@@ -87,20 +112,37 @@ namespace Foodics.Controllers
             splash.Title = dto.Title;
             splash.Description = dto.Description;
 
+            var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads");
+
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
+
+            // Update Photo
             if (dto.Photo != null)
             {
-                var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads");
+                var photoName = Guid.NewGuid() + Path.GetExtension(dto.Photo.FileName);
+                var photoFilePath = Path.Combine(uploadsFolder, photoName);
 
-                var fileName = Guid.NewGuid() + Path.GetExtension(dto.Photo.FileName);
-
-                var filePath = Path.Combine(uploadsFolder, fileName);
-
-                using (var stream = new FileStream(filePath, FileMode.Create))
+                using (var stream = new FileStream(photoFilePath, FileMode.Create))
                 {
                     await dto.Photo.CopyToAsync(stream);
                 }
 
-                splash.Photo = "/uploads/" + fileName;
+                splash.Photo = "/uploads/" + photoName;
+            }
+
+            // Update Video
+            if (dto.Video != null)
+            {
+                var videoName = Guid.NewGuid() + Path.GetExtension(dto.Video.FileName);
+                var videoFilePath = Path.Combine(uploadsFolder, videoName);
+
+                using (var stream = new FileStream(videoFilePath, FileMode.Create))
+                {
+                    await dto.Video.CopyToAsync(stream);
+                }
+
+                splash.Video = "/uploads/" + videoName;
             }
 
             await _context.SaveChangesAsync();

@@ -1,6 +1,5 @@
 ﻿using Foodics.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using POSSystem.Data;
@@ -18,22 +17,33 @@ namespace Foodics.Controllers.Admin
             _context = context;
         }
 
-        [Authorize]
         // 🔹 Get current settings
+        [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetSettings()
         {
             var settings = await _context.AppSettings.FirstOrDefaultAsync();
 
             if (settings == null)
-                return Ok(new { DeliveryFee = 0 });
+            {
+                return Ok(new
+                {
+                    DeliveryFee = 0,
+                    IsDeliveryEnabled = true,
+                    IsPickupEnabled = true
+                });
+            }
 
-            return Ok(settings);
+            return Ok(new
+            {
+                settings.DeliveryFee,
+                settings.IsDeliveryEnabled,
+                settings.IsPickupEnabled
+            });
         }
 
-
-        [Authorize(Roles = "Admin")]
         // 🔹 Update delivery fee
+        [Authorize(Roles = "Admin")]
         [HttpPost("delivery-fee")]
         public async Task<IActionResult> UpdateDeliveryFee(decimal fee)
         {
@@ -43,7 +53,9 @@ namespace Foodics.Controllers.Admin
             {
                 settings = new AppSettings
                 {
-                    DeliveryFee = fee
+                    DeliveryFee = fee,
+                    IsDeliveryEnabled = true,
+                    IsPickupEnabled = true
                 };
 
                 _context.AppSettings.Add(settings);
@@ -57,13 +69,14 @@ namespace Foodics.Controllers.Admin
 
             return Ok(new
             {
-                Message = "Delivery fee updated successfully",
-                DeliveryFee = fee
+                message = "Delivery fee updated successfully",
+                deliveryFee = settings.DeliveryFee
             });
         }
 
-        [HttpPatch("appsettings/delivery")]
+        // 🔹 Enable / Disable Delivery
         [Authorize(Roles = "Admin")]
+        [HttpPatch("delivery")]
         public async Task<IActionResult> ToggleDelivery([FromBody] bool isEnabled)
         {
             var settings = await _context.AppSettings.FirstOrDefaultAsync();
@@ -78,6 +91,27 @@ namespace Foodics.Controllers.Admin
             return Ok(new
             {
                 message = "Delivery status updated",
+                isEnabled
+            });
+        }
+
+        // 🔹 Enable / Disable Pickup
+        [Authorize(Roles = "Admin")]
+        [HttpPatch("pickup")]
+        public async Task<IActionResult> TogglePickup([FromBody] bool isEnabled)
+        {
+            var settings = await _context.AppSettings.FirstOrDefaultAsync();
+
+            if (settings == null)
+                return NotFound("AppSettings not found");
+
+            settings.IsPickupEnabled = isEnabled;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Pickup status updated",
                 isEnabled
             });
         }

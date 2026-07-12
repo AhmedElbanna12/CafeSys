@@ -6,6 +6,9 @@
 
         public decimal DeliveryFee { get; set; }
 
-        public bool IsDeliveryEnabled { get; set; } 
+        public bool IsDeliveryEnabled { get; set; }
+
+
+        public bool IsPickupEnabled { get; set; } = true;
     }
 }
