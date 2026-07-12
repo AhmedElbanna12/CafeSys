@@ -1,5 +1,6 @@
 ﻿using Foodics.Dtos.SplashScreen;
 using Foodics.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using POSSystem.Data;
@@ -41,8 +42,9 @@ namespace Foodics.Controllers
         }
 
         //======================== Create ========================
-
+        [Authorize(Roles = "Admin")]
         [HttpPost]
+
         public async Task<IActionResult> Create([FromForm] CreateSplashScreenDto dto)
         {
             var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads");
@@ -100,7 +102,7 @@ namespace Foodics.Controllers
         }
 
         //======================== Edit ========================
-
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Edit(int id, [FromForm] EditSplashScreenDto dto)
         {
@@ -154,7 +156,7 @@ namespace Foodics.Controllers
         }
 
         //======================== Delete ========================
-
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
