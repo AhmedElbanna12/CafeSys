@@ -571,6 +571,27 @@ namespace Foodics.Controllers
                 ? 0
                 : (int)(totalAmount / 20);
 
+
+
+
+            UserLocation? location = null;
+
+            if (dto.OrderType == OrderType.Delivery)
+            {
+                if (dto.LocationId == null)
+                    return BadRequest("Location is required for delivery");
+
+
+                location = await _context.UserLocations
+                    .FirstOrDefaultAsync(x =>
+                        x.Id == dto.LocationId &&
+                        x.UserId == userId);
+
+
+                if (location == null)
+                    return BadRequest("Invalid location");
+            }
+
             // =========================
             // 📦 ORDER
             // =========================
@@ -590,8 +611,17 @@ namespace Foodics.Controllers
 
                 PaymentMethod = dto.PaymentMethod,
                 OrderType = dto.OrderType,
-                ShippingAddress = dto.ShippingAddress,
 
+                City = location.City,
+                Street = location.Street,
+                BuildingNumber = location.BuildingNumber,
+                FloorNumber = location.FloorNumber,
+                ApartmentNumber = location.ApartmentNumber,
+                Landmark = location.Landmark,
+                PhoneNumber = location.PhoneNumber,
+
+                Latitude = location.Latitude,
+                Longitude = location.Longitude,
                 PointsEarned = pointsEarned,
                 PointsRedeemed = dto.PointsRedeemed,
 

@@ -34,6 +34,7 @@ namespace Foodics.Models
         public string? ProfileImageUrl { get; set; }
 
 
+        public ICollection<UserLocation> Locations { get; set; } = new List<UserLocation>();
 
     }
 }

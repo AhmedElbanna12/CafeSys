@@ -60,6 +60,8 @@ namespace POSSystem.Data
 
         public DbSet<HomeSection> HomeSections { get; set; }
 
+        public DbSet<UserLocation> UserLocations { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

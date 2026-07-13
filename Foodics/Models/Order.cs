@@ -44,12 +44,24 @@ namespace Foodics.Models
 
         public DateTime? PaymentDate { get; set; }
         public DateTime? CompletedAt { get; set; }
-        public string? ShippingAddress { get; set; }
-        public OrderType OrderType { get; internal set; }
+        //public string? ShippingAddress { get; set; }
+        public OrderType OrderType { get; set; }
 
         public decimal DeliveryFee { get; set; }
 
         public bool IsRewardOrder { get; set; }
+
+
+        public string City { get; set; }
+        public string Street { get; set; }
+        public string BuildingNumber { get; set; }
+        public string FloorNumber { get; set; }
+        public string ApartmentNumber { get; set; }
+        public string Landmark { get; set; }
+        public string PhoneNumber { get; set; }
+
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
     }
 
     public enum PaymentMethod
