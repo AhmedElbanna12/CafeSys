@@ -23,7 +23,7 @@ namespace Foodics.Controllers
 
         private string GetUserId()
         {
-            return User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            return User.FindFirst("userId")?.Value!;
         }
 
 
@@ -217,44 +217,22 @@ namespace Foodics.Controllers
         {
             var userId = GetUserId();
 
-
-            var locations = await _context.UserLocations
-                .Where(x => x.UserId == userId)
-                .ToListAsync();
-
-
-
-            var location = locations
-                .FirstOrDefault(x => x.Id == id);
-
-
+            var location = await _context.UserLocations
+                .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
 
             if (location == null)
                 return NotFound("Location not found");
 
-
-
-            foreach (var item in locations)
-            {
-                item.IsDefault = false;
-            }
-
+            await _context.UserLocations
+                .Where(x => x.UserId == userId)
+                .ExecuteUpdateAsync(x => x.SetProperty(p => p.IsDefault, false));
 
             location.IsDefault = true;
 
-
             await _context.SaveChangesAsync();
 
-
-            return Ok(new
-            {
-                message = "Default location updated"
-            });
+            return Ok(location);
         }
-
-
-
-
 
         // =========================
         // 🗑 Delete Location
