@@ -14,7 +14,7 @@
     public enum HomeSectionType
     {
         UserPoints = 1,
-        SplashScreen = 2,
+        Banners = 2,
         Advertisements = 3,
         TopSelling = 4
     }

@@ -18,7 +18,7 @@ namespace Foodics.SeedDatas
                 new HomeSection
                 {
                     Id = 2,
-                    SectionName = HomeSectionType.SplashScreen,
+                    SectionName = HomeSectionType.Banners,
                     DisplayOrder = 2,
                     IsVisible = true
                 },

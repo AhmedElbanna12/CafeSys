@@ -62,6 +62,9 @@ namespace POSSystem.Data
 
         public DbSet<UserLocation> UserLocations { get; set; }
 
+        public DbSet<Banner> Banners { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
