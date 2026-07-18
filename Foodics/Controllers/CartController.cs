@@ -48,6 +48,37 @@ namespace Foodics.Controllers
                 : "en";
         }
 
+
+        private async Task RecalculatePromoAsync(Cart cart)
+        {
+            if (string.IsNullOrWhiteSpace(cart.PromoCode))
+            {
+                cart.Discount = 0;
+                return;
+            }
+
+            var now = NowLocal();
+
+            var promo = await _context.PromoCodes.FirstOrDefaultAsync(x =>
+                x.Code == cart.PromoCode &&
+                x.IsActive &&
+                x.StartDate <= now &&
+                x.EndDate >= now);
+
+            if (promo == null)
+            {
+                cart.PromoCode = null;
+                cart.Discount = 0;
+                return;
+            }
+
+            var subTotal = cart.Items.Sum(i =>
+                (i.Price + i.Modifiers.Sum(m => m.Price * m.Quantity)) * i.Quantity);
+
+            cart.Discount = subTotal * promo.DiscountAmount / 100m;
+        }
+
+
         // =========================
         // ⏱ Timezone
         // =========================
@@ -123,6 +154,13 @@ namespace Foodics.Controllers
 
             modifier.Quantity++;
 
+
+            var cart = await _context.Carts
+    .Include(c => c.Items)
+        .ThenInclude(i => i.Modifiers)
+    .FirstOrDefaultAsync(c => c.UserId == userId);
+
+            await RecalculatePromoAsync(cart);
             await _context.SaveChangesAsync();
 
             var refreshedCart = await _context.Carts
@@ -162,6 +200,14 @@ namespace Foodics.Controllers
             if (modifier.Quantity <= 0)
                 _context.CartItemModifiers.Remove(modifier);
 
+
+            var cart = await _context.Carts
+    .Include(c => c.Items)
+        .ThenInclude(i => i.Modifiers)
+    .FirstOrDefaultAsync(c => c.UserId == userId);
+
+
+            await RecalculatePromoAsync(cart);
             await _context.SaveChangesAsync();
 
             var refreshedCart = await _context.Carts
@@ -315,6 +361,8 @@ namespace Foodics.Controllers
                 cart.Items.Add(cartItem);
             }
 
+
+            await RecalculatePromoAsync(cart);
             await _context.SaveChangesAsync();
 
             var refreshedCart = await _context.Carts
@@ -362,6 +410,8 @@ namespace Foodics.Controllers
                 item.Quantity = dto.Quantity;
             item.Comment = dto.Comment;
 
+
+            await RecalculatePromoAsync(cart);
             await _context.SaveChangesAsync();
 
             var refreshedCart = await _context.Carts
@@ -398,6 +448,8 @@ namespace Foodics.Controllers
             _context.CartItemModifiers.RemoveRange(item.Modifiers);
             cart.Items.Remove(item);
 
+
+            await RecalculatePromoAsync(cart);
             await _context.SaveChangesAsync();
 
             var refreshedCart = await _context.Carts
@@ -442,19 +494,19 @@ namespace Foodics.Controllers
 
             var discount = subTotal * (promo.DiscountAmount / 100m);
 
-            //cart.PromoCode = dto.PromoCode;
-            //cart.Discount = discount;
+            cart.PromoCode = dto.PromoCode;
+            cart.Discount = discount;
 
-            //await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();
 
             return Ok(new
             {
                 cart.Id,
                 cart.UserId,
-                PromoCode = promo.Code,
+                PromoCode = cart.PromoCode,
                 SubTotal = subTotal,
-                Discount = discount,
-                Total = subTotal - discount
+                Discount = cart.Discount,
+                Total = subTotal - cart.Discount
             });
         }
 
@@ -516,12 +568,18 @@ namespace Foodics.Controllers
             // =========================
             // 🎟 PROMO CODE
             // =========================
+
+
+            var promoCode = !string.IsNullOrWhiteSpace(dto.PromoCode)
+    ? dto.PromoCode
+    : cart?.PromoCode;
+
             decimal discountAmount = 0;
 
-            if (!string.IsNullOrWhiteSpace(dto.PromoCode) && !isRewardOrder)
+            if (!string.IsNullOrWhiteSpace(promoCode) && !isRewardOrder)
             {
                 var promo = await _context.PromoCodes.FirstOrDefaultAsync(p =>
-    p.Code == dto.PromoCode &&
+    p.Code == promoCode &&
     p.IsActive &&
     p.StartDate <= now &&
     p.EndDate >= now);
@@ -610,17 +668,16 @@ namespace Foodics.Controllers
 
                 PaymentMethod = dto.PaymentMethod,
                 OrderType = dto.OrderType,
+                City = location?.City,
+                Street = location?.Street,
+                BuildingNumber = location?.BuildingNumber,
+                FloorNumber = location?.FloorNumber,
+                ApartmentNumber = location?.ApartmentNumber,
+                Landmark = location?.Landmark,
+                PhoneNumber = location?.PhoneNumber,
 
-                City = location.City,
-                Street = location.Street,
-                BuildingNumber = location.BuildingNumber,
-                FloorNumber = location.FloorNumber,
-                ApartmentNumber = location.ApartmentNumber,
-                Landmark = location.Landmark,
-                PhoneNumber = location.PhoneNumber,
-
-                Latitude = location.Latitude,
-                Longitude = location.Longitude,
+                Latitude = location?.Latitude ?? 0,
+                Longitude = location?.Longitude ?? 0,
                 PointsEarned = pointsEarned,
                 PointsRedeemed = dto.PointsRedeemed,
 
@@ -772,7 +829,7 @@ namespace Foodics.Controllers
             var productDiscount =
                 subTotalBeforeDiscount - subTotalAfterProductDiscount;
 
-            var promoDiscount = 0m;
+            var promoDiscount = cart.Discount;
 
             var totalDiscount = productDiscount + promoDiscount;
 
@@ -824,7 +881,7 @@ namespace Foodics.Controllers
                 // النهائي بعد كل الخصومات
                 Total = subTotalAfterProductDiscount - promoDiscount,
 
-                PromoCode = null
+                PromoCode = cart.PromoCode
             };
         }
 

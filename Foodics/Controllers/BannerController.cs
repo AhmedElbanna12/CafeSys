@@ -70,11 +70,11 @@ namespace Foodics.Controllers
             return Ok(banner);
         }
 
-        // GET: api/Banner
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
             var lang = GetLang();
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
             var banners = await _context.Banners
                 .OrderByDescending(x => x.Id)
@@ -84,7 +84,9 @@ namespace Foodics.Controllers
                     Title = LocalizationExtensions.Localize(x.TitleAr, x.TitleEn, lang),
                     Description = LocalizationExtensions.Localize(x.DescriptionAr, x.DescriptionEn, lang),
                     SubDescription = LocalizationExtensions.Localize(x.SubDescriptionAr, x.SubDescriptionEn, lang),
-                    x.Photo
+                    Photo = string.IsNullOrEmpty(x.Photo)
+                        ? null
+                        : $"{baseUrl}/Uploads/Banners/{x.Photo}"
                 })
                 .ToListAsync();
 

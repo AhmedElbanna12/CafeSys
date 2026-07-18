@@ -24,36 +24,33 @@ namespace Foodics.Controllers
         }
 
 
-        private string GetLang()
-        {
-            return Request.Headers["Accept-Language"].ToString().StartsWith("ar")
-                ? "ar"
-                : "en";
-        }
-
-
 
         //======================== Get ========================
         [HttpGet]
         public async Task<IActionResult> Get()
         {
-            var lang = GetLang();
+
+            var baseUrl = $"{Request.Scheme}://{Request.Host}";
 
             var data = await _context.SplashScreens
                 .Where(x => x.IsVisible)
                 .Select(x => new SplashScreenDto
                 {
                     Id = x.Id,
-                    Title = LocalizationExtensions.Localize(x.TitleAr, x.TitleEn, lang),
-                    Description = LocalizationExtensions.Localize(x.DescriptionAr, x.DescriptionEn, lang),
-                    Photo = x.Photo,
-                    Video = x.Video
+                    Title = x.Title,
+                    Description = x.Description,
+                    Photo = string.IsNullOrEmpty(x.Photo)
+    ? null
+    : $"{baseUrl}/Uploads/SplashScreens/{x.Photo}",
+
+                    Video = string.IsNullOrEmpty(x.Video)
+    ? null
+    : $"{baseUrl}/Uploads/SplashScreens/{x.Video}"
                 })
                 .ToListAsync();
 
             return Ok(data);
         }
-
 
         [Authorize(Roles = "Admin")]
         [HttpGet("admin")]
@@ -64,10 +61,8 @@ namespace Foodics.Controllers
                 .Select(x => new
                 {
                     x.Id,
-                    x.TitleAr,
-                    x.TitleEn,
-                    x.DescriptionAr,
-                    x.DescriptionEn,
+                    x.Title,
+                    x.Description,
                     x.Photo,
                     x.Video,
                     x.IsVisible
@@ -149,10 +144,8 @@ namespace Foodics.Controllers
 
             var splash = new SplashScreen
             {
-                TitleAr = dto.TitleAr,
-                TitleEn = dto.TitleEn,
-                DescriptionAr = dto.DescriptionAr,
-                DescriptionEn = dto.DescriptionEn,
+                Title = dto.Title,
+                Description = dto.Description,
                 Photo = photoPath,
                 Video = videoPath,
                 IsVisible = dto.IsVisible
@@ -178,17 +171,14 @@ namespace Foodics.Controllers
             if (splash == null)
                 return NotFound();
 
-            if (!string.IsNullOrWhiteSpace(dto.TitleAr))
-                splash.TitleAr = dto.TitleAr;
+           
 
-            if (!string.IsNullOrWhiteSpace(dto.TitleEn))
-                splash.TitleEn = dto.TitleEn;
+            if (!string.IsNullOrWhiteSpace(dto.Title))
+                splash.Title = dto.Title;
 
-            if (!string.IsNullOrWhiteSpace(dto.DescriptionAr))
-                splash.DescriptionAr = dto.DescriptionAr;
 
-            if (!string.IsNullOrWhiteSpace(dto.DescriptionEn))
-                splash.DescriptionEn = dto.DescriptionEn;
+            if (!string.IsNullOrWhiteSpace(dto.Description))
+                splash.Description = dto.Description;
 
             if (dto.IsVisible.HasValue)
                 splash.IsVisible = dto.IsVisible.Value;
