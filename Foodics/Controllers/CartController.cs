@@ -442,16 +442,16 @@ namespace Foodics.Controllers
 
             var discount = subTotal * (promo.DiscountAmount / 100m);
 
-            cart.PromoCode = dto.PromoCode;
-            cart.Discount = discount;
+            //cart.PromoCode = dto.PromoCode;
+            //cart.Discount = discount;
 
-            await _context.SaveChangesAsync();
+            //await _context.SaveChangesAsync();
 
             return Ok(new
             {
                 cart.Id,
                 cart.UserId,
-                cart.PromoCode,
+                PromoCode = promo.Code,
                 SubTotal = subTotal,
                 Discount = discount,
                 Total = subTotal - discount
@@ -521,16 +521,15 @@ namespace Foodics.Controllers
             if (!string.IsNullOrWhiteSpace(dto.PromoCode) && !isRewardOrder)
             {
                 var promo = await _context.PromoCodes.FirstOrDefaultAsync(p =>
-                    p.Code == dto.PromoCode &&
-                    p.IsActive &&
-                    p.StartDate <= now &&
-                    p.EndDate >= now);
+    p.Code == dto.PromoCode &&
+    p.IsActive &&
+    p.StartDate <= now &&
+    p.EndDate >= now);
 
-                if (promo != null)
-                {
-                    discountAmount =
-                        subTotal * (promo.DiscountAmount / 100m);
-                }
+                if (promo == null)
+                    return BadRequest("Promo code is invalid.");
+
+                discountAmount = subTotal * (promo.DiscountAmount / 100m);
             }
             // =========================
             // 🚚 ORDER TYPE SETTINGS
@@ -773,7 +772,7 @@ namespace Foodics.Controllers
             var productDiscount =
                 subTotalBeforeDiscount - subTotalAfterProductDiscount;
 
-            var promoDiscount = cart.Discount;
+            var promoDiscount = 0m;
 
             var totalDiscount = productDiscount + promoDiscount;
 
@@ -825,7 +824,7 @@ namespace Foodics.Controllers
                 // النهائي بعد كل الخصومات
                 Total = subTotalAfterProductDiscount - promoDiscount,
 
-                PromoCode = cart.PromoCode
+                PromoCode = null
             };
         }
 

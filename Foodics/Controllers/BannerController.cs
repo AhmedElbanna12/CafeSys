@@ -1,4 +1,5 @@
 ﻿using Foodics.Dtos.Banner;
+using Foodics.ExtensionMethod;
 using Foodics.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,6 +21,14 @@ namespace Foodics.Controllers
         {
             _context = context;
             _environment = environment;
+        }
+
+
+        private string GetLang()
+        {
+            return Request.Headers["Accept-Language"].ToString().StartsWith("ar")
+                ? "ar"
+                : "en";
         }
 
 
@@ -47,12 +56,14 @@ namespace Foodics.Controllers
 
             var banner = new Banner
             {
-                Title = dto.Title,
-                Description = dto.Description,
-                SubDescription = dto.SubDescription,
+                TitleAr = dto.TitleAr,
+                TitleEn = dto.TitleEn,
+                DescriptionAr = dto.DescriptionAr,
+                DescriptionEn = dto.DescriptionEn,
+                SubDescriptionAr = dto.SubDescriptionAr,
+                SubDescriptionEn = dto.SubDescriptionEn,
                 Photo = photoName
             };
-
             _context.Banners.Add(banner);
             await _context.SaveChangesAsync();
 
@@ -63,8 +74,18 @@ namespace Foodics.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
+            var lang = GetLang();
+
             var banners = await _context.Banners
                 .OrderByDescending(x => x.Id)
+                .Select(x => new
+                {
+                    x.Id,
+                    Title = LocalizationExtensions.Localize(x.TitleAr, x.TitleEn, lang),
+                    Description = LocalizationExtensions.Localize(x.DescriptionAr, x.DescriptionEn, lang),
+                    SubDescription = LocalizationExtensions.Localize(x.SubDescriptionAr, x.SubDescriptionEn, lang),
+                    x.Photo
+                })
                 .ToListAsync();
 
             return Ok(banners);
@@ -80,14 +101,23 @@ namespace Foodics.Controllers
             if (banner == null)
                 return NotFound();
 
-            if (!string.IsNullOrWhiteSpace(dto.Title))
-                banner.Title = dto.Title;
+            if (!string.IsNullOrWhiteSpace(dto.TitleAr))
+                banner.TitleAr = dto.TitleAr;
 
-            if (!string.IsNullOrWhiteSpace(dto.Description))
-                banner.Description = dto.Description;
+            if (!string.IsNullOrWhiteSpace(dto.TitleEn))
+                banner.TitleEn = dto.TitleEn;
 
-            if (!string.IsNullOrWhiteSpace(dto.SubDescription))
-                banner.SubDescription = dto.SubDescription;
+            if (!string.IsNullOrWhiteSpace(dto.DescriptionAr))
+                banner.DescriptionAr = dto.DescriptionAr;
+
+            if (!string.IsNullOrWhiteSpace(dto.DescriptionEn))
+                banner.DescriptionEn = dto.DescriptionEn;
+
+            if (!string.IsNullOrWhiteSpace(dto.SubDescriptionAr))
+                banner.SubDescriptionAr = dto.SubDescriptionAr;
+
+            if (!string.IsNullOrWhiteSpace(dto.SubDescriptionEn))
+                banner.SubDescriptionEn = dto.SubDescriptionEn;
 
             if (dto.Photo != null)
             {

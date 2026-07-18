@@ -1,4 +1,5 @@
 ﻿using Foodics.Dtos.SplashScreen;
+using Foodics.ExtensionMethod;
 using Foodics.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,23 +23,86 @@ namespace Foodics.Controllers
             _environment = environment;
         }
 
-        //======================== Get ========================
 
+        private string GetLang()
+        {
+            return Request.Headers["Accept-Language"].ToString().StartsWith("ar")
+                ? "ar"
+                : "en";
+        }
+
+
+
+        //======================== Get ========================
         [HttpGet]
         public async Task<IActionResult> Get()
         {
+            var lang = GetLang();
+
             var data = await _context.SplashScreens
+                .Where(x => x.IsVisible)
                 .Select(x => new SplashScreenDto
                 {
                     Id = x.Id,
-                    Title = x.Title,
-                    Description = x.Description,
+                    Title = LocalizationExtensions.Localize(x.TitleAr, x.TitleEn, lang),
+                    Description = LocalizationExtensions.Localize(x.DescriptionAr, x.DescriptionEn, lang),
                     Photo = x.Photo,
                     Video = x.Video
                 })
                 .ToListAsync();
 
             return Ok(data);
+        }
+
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("admin")]
+        public async Task<IActionResult> GetForAdmin()
+        {
+            var data = await _context.SplashScreens
+                .OrderByDescending(x => x.Id)
+                .Select(x => new
+                {
+                    x.Id,
+                    x.TitleAr,
+                    x.TitleEn,
+                    x.DescriptionAr,
+                    x.DescriptionEn,
+                    x.Photo,
+                    x.Video,
+                    x.IsVisible
+                })
+                .ToListAsync();
+
+            return Ok(data);
+        }
+
+
+
+        [Authorize(Roles = "Admin")]
+        [HttpPatch("{id}/visibility")]
+        public async Task<IActionResult> ChangeVisibility(
+    int id,
+    [FromBody] ChangeSplashVisibilityDto dto)
+        {
+            var splash = await _context.SplashScreens.FindAsync(id);
+
+            if (splash == null)
+                return NotFound(new
+                {
+                    Message = "Splash screen not found."
+                });
+
+            splash.IsVisible = dto.IsVisible;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                Message = $"Splash screen visibility updated to {(dto.IsVisible ? "Visible" : "Hidden")}.",
+                splash.Id,
+                splash.IsVisible
+            });
         }
 
         //======================== Create ========================
@@ -85,10 +149,13 @@ namespace Foodics.Controllers
 
             var splash = new SplashScreen
             {
-                Title = dto.Title,
-                Description = dto.Description,
+                TitleAr = dto.TitleAr,
+                TitleEn = dto.TitleEn,
+                DescriptionAr = dto.DescriptionAr,
+                DescriptionEn = dto.DescriptionEn,
                 Photo = photoPath,
-                Video = videoPath
+                Video = videoPath,
+                IsVisible = dto.IsVisible
             };
 
             _context.SplashScreens.Add(splash);
@@ -111,8 +178,20 @@ namespace Foodics.Controllers
             if (splash == null)
                 return NotFound();
 
-            splash.Title = dto.Title;
-            splash.Description = dto.Description;
+            if (!string.IsNullOrWhiteSpace(dto.TitleAr))
+                splash.TitleAr = dto.TitleAr;
+
+            if (!string.IsNullOrWhiteSpace(dto.TitleEn))
+                splash.TitleEn = dto.TitleEn;
+
+            if (!string.IsNullOrWhiteSpace(dto.DescriptionAr))
+                splash.DescriptionAr = dto.DescriptionAr;
+
+            if (!string.IsNullOrWhiteSpace(dto.DescriptionEn))
+                splash.DescriptionEn = dto.DescriptionEn;
+
+            if (dto.IsVisible.HasValue)
+                splash.IsVisible = dto.IsVisible.Value;
 
             var uploadsFolder = Path.Combine(_environment.WebRootPath, "uploads");
 

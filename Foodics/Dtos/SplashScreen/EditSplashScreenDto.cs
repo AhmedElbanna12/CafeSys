@@ -4,15 +4,19 @@ namespace Foodics.Dtos.SplashScreen
 {
     public class EditSplashScreenDto
     {
-        [Required]
-        public string Title { get; set; } = null!;
+        public string? TitleAr { get; set; }
 
-        [Required]
-        public string Description { get; set; } = null!;
+        public string? TitleEn { get; set; }
+
+        public string? DescriptionAr { get; set; }
+
+        public string? DescriptionEn { get; set; }
 
         public IFormFile? Photo { get; set; }
 
-
         public IFormFile? Video { get; set; }
+
+        public bool? IsVisible { get; set; }
+
     }
 }
