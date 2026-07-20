@@ -849,11 +849,19 @@ namespace Foodics.Controllers
                         i.Product.NameAr,
                         i.Product.NameEn,
                         lang),
-
                     Price = i.Price,
                     Quantity = i.Quantity,
 
+                    ProductSizeId = i.ProductSizeId,
+                    ProductSizeName = i.ProductSize == null
+    ? null
+    : LocalizationExtensions.Localize(
+        i.ProductSize.NameAr,
+        i.ProductSize.NameEn,
+        lang),
+
                     SizePrice = i.ProductSize?.Price ?? 0,
+
 
                     Modifiers = i.Modifiers.Select(m => new CartItemModifierDto
                     {
