@@ -1,4 +1,4 @@
-﻿using Foodics.Dtos.Cart.Cart;
+using Foodics.Dtos.Cart.Cart;
 using Foodics.Dtos.Cart.Order;
 using Foodics.Dtos.Cart.Promocode;
 using Foodics.Dtos.Paymob;
@@ -574,6 +574,8 @@ namespace Foodics.Controllers
     ? dto.PromoCode
     : cart?.PromoCode;
 
+
+            decimal? promoPercentage = null;
             decimal discountAmount = 0;
 
             if (!string.IsNullOrWhiteSpace(promoCode) && !isRewardOrder)
@@ -588,6 +590,9 @@ namespace Foodics.Controllers
                     return BadRequest("Promo code is invalid.");
 
                 discountAmount = subTotal * (promo.DiscountAmount / 100m);
+
+                promoPercentage = promo.DiscountAmount;
+
             }
             // =========================
             // 🚚 ORDER TYPE SETTINGS
@@ -624,9 +629,14 @@ namespace Foodics.Controllers
             // =========================
             // ⭐ POINTS
             // =========================
+            var pointsSettings = await _context.PointsSettings.FirstOrDefaultAsync();
+            decimal egpPerPoint = (pointsSettings != null && pointsSettings.EgpPerPoint > 0)
+                ? pointsSettings.EgpPerPoint
+                : 20m;
+
             int pointsEarned = isRewardOrder
                 ? 0
-                : (int)(totalAmount / 20);
+                : (int)(totalAmount / egpPerPoint);
 
 
 
@@ -682,6 +692,9 @@ namespace Foodics.Controllers
                 PointsRedeemed = dto.PointsRedeemed,
 
                 IsRewardOrder = isRewardOrder,
+
+                PromoCode = promoCode,
+                PromoDiscountPercentage = promoPercentage,
 
                 OrderItems = new List<OrderItem>()
             };

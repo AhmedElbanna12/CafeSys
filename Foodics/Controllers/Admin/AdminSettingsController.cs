@@ -1,4 +1,5 @@
-﻿using Foodics.Models;
+using Foodics.Dtos.Admin.Settings;
+using Foodics.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,9 @@ namespace Foodics.Controllers.Admin
         public async Task<IActionResult> GetSettings()
         {
             var settings = await _context.AppSettings.FirstOrDefaultAsync();
+            var pointsSettings = await _context.PointsSettings.FirstOrDefaultAsync();
+
+            var egpPerPoint = pointsSettings?.EgpPerPoint ?? 20m;
 
             if (settings == null)
             {
@@ -30,7 +34,8 @@ namespace Foodics.Controllers.Admin
                 {
                     DeliveryFee = 0,
                     IsDeliveryEnabled = true,
-                    IsPickupEnabled = true
+                    IsPickupEnabled = true,
+                    EgpPerPoint = egpPerPoint
                 });
             }
 
@@ -38,8 +43,73 @@ namespace Foodics.Controllers.Admin
             {
                 settings.DeliveryFee,
                 settings.IsDeliveryEnabled,
-                settings.IsPickupEnabled
+                settings.IsPickupEnabled,
+                EgpPerPoint = egpPerPoint
             });
+        }
+
+        // 🔹 Get points settings
+        [Authorize]
+        [HttpGet("points")]
+        public async Task<IActionResult> GetPointsSettings()
+        {
+            var pointsSettings = await _context.PointsSettings.FirstOrDefaultAsync();
+
+            if (pointsSettings == null)
+            {
+                return Ok(new PointsSettingsDto
+                {
+                    EgpPerPoint = 20m
+                });
+            }
+
+            return Ok(new PointsSettingsDto
+            {
+                EgpPerPoint = pointsSettings.EgpPerPoint
+            });
+        }
+
+        // 🔹 Update points settings
+        [Authorize(Roles = "Admin")]
+        [HttpPost("points")]
+        public async Task<IActionResult> UpdatePointsSettings([FromBody] UpdatePointsSettingsDto dto)
+        {
+            if (dto == null || dto.EgpPerPoint <= 0)
+            {
+                return BadRequest("Point value must be greater than 0.");
+            }
+
+            var pointsSettings = await _context.PointsSettings.FirstOrDefaultAsync();
+
+            if (pointsSettings == null)
+            {
+                pointsSettings = new PointsSettings
+                {
+                    EgpPerPoint = dto.EgpPerPoint,
+                    UpdatedAt = DateTime.UtcNow
+                };
+                _context.PointsSettings.Add(pointsSettings);
+            }
+            else
+            {
+                pointsSettings.EgpPerPoint = dto.EgpPerPoint;
+                pointsSettings.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                message = "Points settings updated successfully",
+                egpPerPoint = pointsSettings.EgpPerPoint
+            });
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpPut("points")]
+        public async Task<IActionResult> UpdatePointsSettingsPut([FromBody] UpdatePointsSettingsDto dto)
+        {
+            return await UpdatePointsSettings(dto);
         }
 
         // 🔹 Update delivery fee

@@ -74,6 +74,10 @@ namespace Foodics.Controllers.Admin
                     o.Landmark,
                     o.PhoneNumber,
 
+
+                    o.PromoCode,
+                    o.PromoDiscountPercentage,
+
                     o.Latitude,
                     o.Longitude,
                     o.OrderType,

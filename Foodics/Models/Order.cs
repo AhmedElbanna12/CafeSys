@@ -62,6 +62,12 @@ namespace Foodics.Models
 
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
+
+        public string? PromoCode { get; set; }
+
+        public decimal? PromoDiscountPercentage { get; set; }
+
+
     }
 
     public enum PaymentMethod

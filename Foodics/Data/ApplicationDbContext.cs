@@ -1,4 +1,4 @@
-﻿using Foodics.Models;
+using Foodics.Models;
 using Foodics.SeedDatas;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -50,6 +50,8 @@ namespace POSSystem.Data
         public DbSet<PromoCode> PromoCodes { get; set; }
 
         public DbSet<AppSettings> AppSettings { get; set; }
+
+        public DbSet<PointsSettings> PointsSettings { get; set; }
 
         public DbSet<UserDevice> UserDevices { get; set; }
 
@@ -180,6 +182,10 @@ namespace POSSystem.Data
 
             builder.Entity<AppSettings>()
                 .Property(p => p.DeliveryFee)
+                .HasPrecision(18, 2);
+
+            builder.Entity<PointsSettings>()
+                .Property(p => p.EgpPerPoint)
                 .HasPrecision(18, 2);
 
             // =========================
