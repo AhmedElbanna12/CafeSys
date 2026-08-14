@@ -1,0 +1,27 @@
+info:
+  name: TopSellingProduct
+  type: http
+  seq: 6
+
+http:
+  method: GET
+  url: http://biscofa.runasp.net/api/admin/products/top-selling?count=10&days=10
+  headers:
+    - name: Accept-Language
+      value: en
+  params:
+    - name: count
+      value: "10"
+      type: query
+    - name: days
+      value: "10"
+      type: query
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQHBvcy5jb20iLCJ1c2VySWQiOiIyNzQ3ODYwNy01MzQ5LTQ4NDYtODVmNy1iZDkzZjRhNGUxM2YiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbiIsImV4cCI6MTc4MTE3NzQzMywiaXNzIjoiRm9vZGljc0FQSSIsImF1ZCI6IkZvb2RpY3NVc2VycyJ9.JGlIqyBufywaDUdr1Hul_uQNOuKxwCTjAvgPSHuIuX8
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

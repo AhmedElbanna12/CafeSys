@@ -1,0 +1,17 @@
+info:
+  name: Delete
+  type: http
+  seq: 4
+
+http:
+  method: DELETE
+  url: http://biscofa.runasp.net/api/admin/products/26
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQHBvcy5jb20iLCJ1c2VySWQiOiIyNzQ3ODYwNy01MzQ5LTQ4NDYtODVmNy1iZDkzZjRhNGUxM2YiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbiIsImV4cCI6MTc3OTQ5MTY2NiwiaXNzIjoiRm9vZGljc0FQSSIsImF1ZCI6IkZvb2RpY3NVc2VycyJ9.PFW_fEUX_I0vrq68mZMpCQffonAwahG0QH2Z7_co5e8
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

@@ -1,0 +1,38 @@
+info:
+  name: Create
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: http://biscofa.runasp.net/api/admin/products/modifier-groups/2/options
+  body:
+    type: json
+    data: "// {\r
+
+      //   \"name\": \"testop2\",\r
+
+      //   \"extraPrice\": 17\r
+
+      // }\r
+
+      \r
+
+      {\r
+
+      \  \"nameAr\": \"string\",\r
+
+      \  \"nameEn\": \"string\",\r
+
+      \  \"extraPrice\": 0\r
+
+      }"
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQHBvcy5jb20iLCJ1c2VySWQiOiJiZmIwMThiYi0yODZiLTRkYTUtYmEwZi1lYTQ3ZTA0NTRkN2MiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbiIsImV4cCI6MTc3NjcyMDcwMiwiaXNzIjoiRm9vZGljc0FQSSIsImF1ZCI6IkZvb2RpY3NVc2VycyJ9.6C_XoBMfNeBWeWwEEX_LW8Ghc_11ryBuPfU9zz-j4HI
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

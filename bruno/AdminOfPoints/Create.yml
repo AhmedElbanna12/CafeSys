@@ -1,0 +1,20 @@
+info:
+  name: Create
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: http://biscofa.runasp.net/api/admin/settings/points
+  body:
+    type: json
+    data: "{\r\n  \"egpPerPoint\": 30\r\n}"
+  auth:
+    type: bearer
+    token: ""
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

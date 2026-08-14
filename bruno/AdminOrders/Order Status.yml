@@ -1,0 +1,50 @@
+info:
+  name: Order Status
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: http://biscofa.runasp.net/api/AdminOrders/28/status?status=1
+  params:
+    - name: status
+      value: "1"
+      type: query
+  body:
+    type: json
+    data: "/*\r
+
+      \r
+
+      status \r
+
+      \r
+
+      0------- Pending\r
+
+      1------  Completed\r
+
+      2------  Cancelled\r
+
+      \r
+
+      \r
+
+      \r
+
+      type \r
+
+      0----- من المكان \r
+
+      1----   دليفري\r
+
+      */"
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQHBvcy5jb20iLCJ1c2VySWQiOiJiZmIwMThiYi0yODZiLTRkYTUtYmEwZi1lYTQ3ZTA0NTRkN2MiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbiIsImV4cCI6MTc3NzQ2NzAwMiwiaXNzIjoiRm9vZGljc0FQSSIsImF1ZCI6IkZvb2RpY3NVc2VycyJ9.t1xBuMcXyz1r6J7HPbE-Fx_Dhtx3HrL1WY69EkSXaSU
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

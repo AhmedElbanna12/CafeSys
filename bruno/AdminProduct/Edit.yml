@@ -1,0 +1,64 @@
+info:
+  name: Edit
+  type: http
+  seq: 3
+
+http:
+  method: PUT
+  url: http://biscofa.runasp.net/api/admin/products/2
+  body:
+    type: multipart-form
+    data:
+      - name: Name
+        type: text
+        value: pr
+        disabled: true
+      - name: Description
+        type: text
+        value: "222"
+        disabled: true
+      - name: Price
+        type: text
+        value: "60"
+      - name: CategoryId
+        type: text
+        value: "1"
+      - name: Calories
+        type: text
+        value: "500"
+      - name: PointsReward
+        type: text
+        value: "11"
+      - name: Image
+        type: file
+        value: []
+      - name: DiscountPercentage
+        type: text
+        value: "20"
+      - name: DiscountStart
+        type: text
+        value: 2026-03-30T04:23:42.559Z
+      - name: DiscountEnd
+        type: text
+        value: 2026-03-31T04:23:42.559Z
+      - name: NameAr
+        type: text
+        value: ""
+      - name: NameEn
+        type: text
+        value: ""
+      - name: DescriptionAr
+        type: text
+        value: ""
+      - name: DescriptionEn
+        type: text
+        value: ""
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQHBvcy5jb20iLCJ1c2VySWQiOiJiZmIwMThiYi0yODZiLTRkYTUtYmEwZi1lYTQ3ZTA0NTRkN2MiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbiIsImV4cCI6MTc3NzIzODM1OCwiaXNzIjoiRm9vZGljc0FQSSIsImF1ZCI6IkZvb2RpY3NVc2VycyJ9.diYqFzYQHYdjORcjnsez_ig5uWLuUiZiHAQgvF5AF9A
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

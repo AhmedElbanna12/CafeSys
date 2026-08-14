@@ -1,0 +1,32 @@
+info:
+  name: Create
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: http://biscofa.runasp.net/api/admin/categories
+  body:
+    type: json
+    data: "{\r
+
+      \  \"nameAr\": \"كاتيج\",\r
+
+      \  \"nameEn\": \"cat\",\r
+
+      \  \"descriptionAr\": \"كاتي\",\r
+
+      \  \"descriptionEn\": \"cat\"\r
+
+      }\r
+
+      \r\n"
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQHBvcy5jb20iLCJ1c2VySWQiOiIyNzQ3ODYwNy01MzQ5LTQ4NDYtODVmNy1iZDkzZjRhNGUxM2YiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbiIsImV4cCI6MTc4MDkzNjI0NywiaXNzIjoiRm9vZGljc0FQSSIsImF1ZCI6IkZvb2RpY3NVc2VycyJ9.CmJ9oEsGTwZp7_XU1sjo-J7e0TRLK2L7JcMDt2K-nJg
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

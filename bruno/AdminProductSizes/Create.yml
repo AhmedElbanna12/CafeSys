@@ -1,0 +1,40 @@
+info:
+  name: Create
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: http://biscofa.runasp.net/api/admin/products/2/sizes
+  body:
+    type: json
+    data: "// {\r
+
+      //   \"name\": \"big\",\r
+
+      //   \"price\": 60,\r
+
+      //   \"isDefault\": true\r
+
+      // }\r
+
+      \r
+
+      {\r
+
+      \  \"nameAr\": \"string\",\r
+
+      \  \"nameEn\": \"string\",\r
+
+      \  \"price\": 0,\r
+
+      \  \"isDefault\": true\r
+
+      }"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

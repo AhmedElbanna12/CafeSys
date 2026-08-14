@@ -1,0 +1,42 @@
+info:
+  name: Payment Status
+  type: http
+  seq: 3
+
+http:
+  method: PUT
+  url: http://biscofa.runasp.net/api/AdminOrders/44/payment?paymentStatus=3
+  params:
+    - name: paymentStatus
+      value: "3"
+      type: query
+  body:
+    type: json
+    data: "/*\r
+
+      \ public enum PaymentStatus\r
+
+      \ {\r
+
+      \     Unpaid,   ------0\r
+
+      \     Paid,     ------1\r
+
+      \     Faile ,   ------2\r
+
+      \     Pending   ------3\r
+
+      \ }\r
+
+      \r
+
+      */"
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQHBvcy5jb20iLCJ1c2VySWQiOiI0MTZmODY1YS01YzUwLTRmZTctOWRkMS0xMzY0OWViMTExZTYiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbiIsImV4cCI6MTc3NjAwMDg5MCwiaXNzIjoiRm9vZGljc0FQSSIsImF1ZCI6IkZvb2RpY3NVc2VycyJ9.Tq9d6yVrzqD08S8d1L3fRVWkJSINfEaJYib5BTKuJ-I
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

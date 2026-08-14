@@ -1,0 +1,20 @@
+info:
+  name: Get
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: http://biscofa.runasp.net/api/AdminOrders
+  body:
+    type: json
+    data: ""
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQHBvcy5jb20iLCJ1c2VySWQiOiIyNzQ3ODYwNy01MzQ5LTQ4NDYtODVmNy1iZDkzZjRhNGUxM2YiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbiIsImV4cCI6MTc4MTE3NzQzMywiaXNzIjoiRm9vZGljc0FQSSIsImF1ZCI6IkZvb2RpY3NVc2VycyJ9.JGlIqyBufywaDUdr1Hul_uQNOuKxwCTjAvgPSHuIuX8
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

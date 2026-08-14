@@ -1,0 +1,36 @@
+info:
+  name: Edit
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: http://biscofa.runasp.net/api/admin/products/modifier-options/33
+  body:
+    type: json
+    data: "// {\r
+
+      //   \"name\": \"testupdateops\",\r
+
+      //   \"extraPrice\": 11\r
+
+      // }\r
+
+      \r
+
+      {\r
+
+      \  \"nameAr\": \"string\",\r
+
+      \  \"nameEn\": \"string\",\r
+
+      \  \"extraPrice\": 0\r
+
+      }"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

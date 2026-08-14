@@ -1,0 +1,24 @@
+info:
+  name: Edit
+  type: http
+  seq: 1
+
+http:
+  method: PUT
+  url: http://biscofa.runasp.net/api/admin/categories/9
+  body:
+    type: json
+    data: "{\r
+
+      \  \"name\": \"sf\",\r
+
+      \  \"description\": \"sfsf\"\r
+
+      }"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

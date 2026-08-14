@@ -1,0 +1,20 @@
+info:
+  name: Enable
+  type: http
+  seq: 3
+
+http:
+  method: PATCH
+  url: http://biscofa.runasp.net/api/admin/settings/appsettings/delivery
+  body:
+    type: json
+    data: "true"
+  auth:
+    type: bearer
+    token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQHBvcy5jb20iLCJ1c2VySWQiOiJiZmIwMThiYi0yODZiLTRkYTUtYmEwZi1lYTQ3ZTA0NTRkN2MiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3JvbGUiOiJBZG1pbiIsImV4cCI6MTc3NzQ2NzAwMiwiaXNzIjoiRm9vZGljc0FQSSIsImF1ZCI6IkZvb2RpY3NVc2VycyJ9.t1xBuMcXyz1r6J7HPbE-Fx_Dhtx3HrL1WY69EkSXaSU
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
