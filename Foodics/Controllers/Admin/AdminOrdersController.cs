@@ -41,6 +41,143 @@ namespace Foodics.Controllers.Admin
         //    return Ok(orders);
         //}
 
+
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchOrders(
+            string? search = null,
+            int page = 1,
+            int pageSize = 10)
+        {
+            if (page < 1)
+                page = 1;
+
+            if (pageSize < 1)
+                pageSize = 10;
+
+            if (pageSize > 100)
+                pageSize = 100;
+
+            var query = _context.Orders
+                .AsNoTracking()
+                .Where(o => true);
+
+            // Server-side search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = search.Trim();
+
+                if (int.TryParse(search, out int orderId))
+                {
+                    query = query.Where(o =>
+                        o.Id == orderId ||
+                        o.PhoneNumber.Contains(search) ||
+                        o.User.UserName.Contains(search));
+                }
+                else
+                {
+                    query = query.Where(o =>
+                        o.PhoneNumber.Contains(search) ||
+                        o.User.UserName.Contains(search));
+                }
+            }
+
+            // Total count after search
+            var totalCount = await query.CountAsync();
+
+            // Pagination
+            var orders = await query
+                .OrderByDescending(o => o.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(o => new
+                {
+                    o.Id,
+                    o.UserId,
+                    o.SubTotal,
+                    o.DiscountAmount,
+                    o.TotalAmount,
+                    o.PointsEarned,
+                    o.PointsRedeemed,
+                    o.CreatedAt,
+                    o.OrderStatus,
+                    o.PaymentStatus,
+                    o.PaymentMethod,
+
+                    o.City,
+                    o.Street,
+                    o.BuildingNumber,
+                    o.FloorNumber,
+                    o.ApartmentNumber,
+                    o.Landmark,
+                    o.PhoneNumber,
+
+                    o.PromoCode,
+                    o.PromoDiscountPercentage,
+
+                    o.Latitude,
+                    o.Longitude,
+                    o.OrderType,
+                    o.DeliveryFee,
+                    o.IsRewardOrder,
+
+                    User = o.User,
+
+                    OrderItems = o.OrderItems.Select(oi => new
+                    {
+                        oi.Id,
+                        oi.OrderId,
+                        oi.ProductId,
+                        oi.ProductNameAr,
+                        oi.ProductNameEn,
+
+                        oi.ProductSizeId,
+
+                        SizeNameAr = oi.ProductSize != null
+                            ? oi.ProductSize.NameAr
+                            : null,
+
+                        SizeNameEn = oi.ProductSize != null
+                            ? oi.ProductSize.NameEn
+                            : null,
+
+                        oi.Comment,
+                        oi.Quantity,
+                        oi.UnitPrice,
+                        oi.DiscountAmount,
+                        oi.TotalPrice,
+
+                        Modifiers = oi.Modifiers.Select(m => new
+                        {
+                            ModifierOptionNameAr = m.ModifierOption.NameAr,
+                            ModifierOptionNameEn = m.ModifierOption.NameEn,
+                            m.Quantity,
+                            UnitPrice = m.Price,
+                            TotalPrice = m.Price * m.Quantity
+                        })
+                    })
+                })
+                .ToListAsync();
+
+            var totalPages = (int)Math.Ceiling(
+                (double)totalCount / pageSize
+            );
+
+            return Ok(new
+            {
+                data = orders,
+
+                pagination = new
+                {
+                    currentPage = page,
+                    pageSize,
+                    totalCount,
+                    totalPages,
+                    hasNextPage = page < totalPages,
+                    hasPreviousPage = page > 1
+                }
+            });
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAllOrders()
         {

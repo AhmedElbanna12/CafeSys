@@ -110,6 +110,74 @@ namespace Foodics.Controllers.Admin
             return Ok(await Map(product.Id));
         }
 
+
+
+        [HttpGet("search")]
+        public async Task<IActionResult> Search(
+            string? search = null,
+            int page = 1,
+            int pageSize = 10)
+        {
+            if (page < 1)
+                page = 1;
+
+            if (pageSize < 1)
+                pageSize = 10;
+
+            if (pageSize > 100)
+                pageSize = 100;
+
+            var query = _context.Products
+                .Include(p => p.Category)
+                .Where(p => !p.IsDeleted);
+
+            // Server-side search
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = search.Trim();
+
+                query = query.Where(p =>
+                    p.NameEn.Contains(search) ||
+                    p.NameAr.Contains(search));
+            }
+
+            // Total results after search
+            var totalCount = await query.CountAsync();
+
+            // Pagination
+            var products = await query
+                .OrderBy(p => p.Category.DisplayOrder)
+                .ThenBy(p => p.NameEn)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var result = new List<object>();
+
+            foreach (var product in products)
+            {
+                result.Add(await Map(product.Id));
+            }
+
+            var totalPages = (int)Math.Ceiling(
+                (double)totalCount / pageSize
+            );
+
+            return Ok(new
+            {
+                data = result,
+
+                pagination = new
+                {
+                    currentPage = page,
+                    pageSize,
+                    totalCount,
+                    totalPages,
+                    hasNextPage = page < totalPages,
+                    hasPreviousPage = page > 1
+                }
+            });
+        }
         // =========================
         // GET ALL
         // =========================
