@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 
 namespace Foodics.Dtos.Admin.Product.ProductModifierOption
 {
@@ -12,5 +12,6 @@ namespace Foodics.Dtos.Admin.Product.ProductModifierOption
         public string NameEn { get; set; } = string.Empty;
 
         public decimal ExtraPrice { get; set; }
+        public bool IsCountable { get; set; } = true;
     }
 }

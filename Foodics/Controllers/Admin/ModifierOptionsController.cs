@@ -1,4 +1,4 @@
-﻿using Foodics.Dtos.Admin.Product.ProductModifierOption;
+using Foodics.Dtos.Admin.Product.ProductModifierOption;
 using Foodics.ExtensionMethod;
 using Foodics.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -33,7 +33,8 @@ namespace Foodics.Controllers.Admin
                 ModifierGroupId = groupId,
                 NameAr = dto.NameAr,
                 NameEn = dto.NameEn,
-                ExtraPrice = dto.ExtraPrice
+                ExtraPrice = dto.ExtraPrice,
+                IsCountable = dto.IsCountable
             };
 
             _context.ModifierOptions.Add(option);
@@ -55,6 +56,7 @@ namespace Foodics.Controllers.Admin
             if (dto.NameAr != null) option.NameAr = dto.NameAr;
             if (dto.NameEn != null) option.NameEn = dto.NameEn;
             if (dto.ExtraPrice.HasValue) option.ExtraPrice = dto.ExtraPrice.Value;
+            if (dto.IsCountable.HasValue) option.IsCountable = dto.IsCountable.Value;
 
             await _context.SaveChangesAsync();
 
@@ -97,7 +99,8 @@ namespace Foodics.Controllers.Admin
             {
                 Id = o.Id,
                 Name = LocalizationExtensions.Localize(o.NameAr, o.NameEn, lang),
-                ExtraPrice = o.ExtraPrice
+                ExtraPrice = o.ExtraPrice,
+                IsCountable = o.IsCountable
             };
         }
     }

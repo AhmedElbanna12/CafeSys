@@ -214,6 +214,7 @@ namespace POSSystem.Data
             builder.Entity<OrderItemModifier>().Property(x => x.Price).HasPrecision(18, 2);
 
             builder.Entity<ModifierOption>().Property(x => x.ExtraPrice).HasPrecision(18, 2);
+            builder.Entity<ModifierOption>().Property(x => x.IsCountable).HasDefaultValue(true);
 
             builder.Entity<ProductIngredient>().Property(x => x.Quantity).HasPrecision(18, 2);
             builder.Entity<Ingredient>().Property(x => x.Quantity).HasPrecision(18, 2);

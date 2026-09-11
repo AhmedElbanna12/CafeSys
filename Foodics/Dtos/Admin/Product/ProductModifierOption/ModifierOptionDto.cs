@@ -1,4 +1,4 @@
-﻿namespace Foodics.Dtos.Admin.Product.ProductModifierOption
+namespace Foodics.Dtos.Admin.Product.ProductModifierOption
 {
     public class ModifierOptionDto
     {
@@ -7,5 +7,6 @@
         public string Name { get; set; }
 
         public decimal ExtraPrice { get; set; }
+        public bool IsCountable { get; set; }
     }
 }

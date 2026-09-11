@@ -251,6 +251,7 @@ namespace Foodics.Controllers
                 NameAr = m.ModifierOption.NameAr,
                 NameEn = m.ModifierOption.NameEn,
 
+                IsCountable = m.ModifierOption.IsCountable,
                 Quantity = m.Quantity,
                 Price = m.Price
             }));
@@ -544,6 +545,7 @@ namespace Foodics.Controllers
                 cart = await _context.Carts
                     .Include(c => c.Items)
                         .ThenInclude(i => i.Modifiers)
+                            .ThenInclude(m => m.ModifierOption)
                     .Include(c => c.Items)
                         .ThenInclude(i => i.Product)
                     .Include(c => c.Items)
@@ -552,6 +554,20 @@ namespace Foodics.Controllers
 
                 if (cart == null || !cart.Items.Any())
                     return BadRequest("Cart is empty");
+
+                var nonCountableExceeded = cart.Items
+                    .SelectMany(i => i.Modifiers)
+                    .FirstOrDefault(m => m.Quantity > 1 && (m.ModifierOption != null ? !m.ModifierOption.IsCountable : false));
+
+                if (nonCountableExceeded != null)
+                {
+                    var optName = LocalizationExtensions.Localize(
+                        nonCountableExceeded.ModifierOption?.NameAr,
+                        nonCountableExceeded.ModifierOption?.NameEn,
+                        GetLang());
+
+                    return BadRequest($"Modifier '{optName}' is not countable and cannot have a quantity greater than 1.");
+                }
             }
 
             // =========================
@@ -883,7 +899,8 @@ namespace Foodics.Controllers
                         ModifierOptionNameEn = m.ModifierOption.NameEn,
                         ModifierOptionId = m.ModifierOptionId,
                         Price = m.Price * m.Quantity , 
-                        Quantity = m.Quantity
+                        Quantity = m.Quantity,
+                        IsCountable = m.ModifierOption?.IsCountable ?? true
                     }).ToList()
                 }).ToList(),
 

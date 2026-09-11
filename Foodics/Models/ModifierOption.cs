@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Foodics.Models
@@ -11,6 +11,7 @@ namespace Foodics.Models
         public string? NameAr { get; set; }
         public string? NameEn { get; set; }
         public decimal ExtraPrice { get; set; }
+        public bool IsCountable { get; set; } = true;
 
         [ForeignKey("ModifierGroup")]
         public int ModifierGroupId { get; set; }

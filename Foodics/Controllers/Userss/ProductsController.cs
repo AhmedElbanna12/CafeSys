@@ -1,4 +1,4 @@
-﻿using Foodics.Dtos.Admin.Product;
+using Foodics.Dtos.Admin.Product;
 using Foodics.Dtos.Admin.Product.Product;
 using Foodics.Dtos.Userproduct;
 using Foodics.ExtensionMethod;
@@ -121,7 +121,8 @@ namespace Foodics.Controllers
                                 o.NameEn,
                                 lang),
 
-                            ExtraPrice = o.ExtraPrice
+                            ExtraPrice = o.ExtraPrice,
+                            IsCountable = o.IsCountable
                         }).ToList()
                     }).ToList(),
 

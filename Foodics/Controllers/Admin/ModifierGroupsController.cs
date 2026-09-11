@@ -1,4 +1,4 @@
-﻿using Foodics.Dtos.Admin.Product.ProductModifierGroup;
+using Foodics.Dtos.Admin.Product.ProductModifierGroup;
 using Foodics.ExtensionMethod;
 using Foodics.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -107,7 +107,8 @@ namespace Foodics.Controllers.Admin
                 {
                     Id = o.Id,
                     Name = LocalizationExtensions.Localize(o.NameAr, o.NameEn, lang),
-                    ExtraPrice = o.ExtraPrice
+                    ExtraPrice = o.ExtraPrice,
+                    IsCountable = o.IsCountable
                 }).ToList() ?? new List<Foodics.Dtos.Admin.Product.ProductModifierOption.ModifierOptionDto>()
             };
         }
